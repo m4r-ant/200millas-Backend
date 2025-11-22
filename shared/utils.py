@@ -55,22 +55,44 @@ def get_user_id(event):
     """Extrae user_id del contexto del autorizador"""
     try:
         authorizer = event.get('requestContext', {}).get('authorizer', {})
+        
+        # Debug logging
+        print(f"get_user_id - authorizer keys: {list(authorizer.keys()) if authorizer else 'None'}")
+        if 'context' in authorizer:
+            print(f"get_user_id - context keys: {list(authorizer['context'].keys()) if authorizer.get('context') else 'None'}")
+        
         # Intentar diferentes ubicaciones donde puede estar el user_id
         # 1. En context (cuando viene de Lambda authorizer)
         if 'context' in authorizer:
-            return authorizer['context'].get('user_id')
+            user_id = authorizer['context'].get('user_id')
+            if user_id:
+                print(f"get_user_id - found in context: {user_id}")
+                return str(user_id).strip()
         # 2. Directamente en authorizer
         if 'user_id' in authorizer:
-            return authorizer.get('user_id')
+            user_id = authorizer.get('user_id')
+            if user_id:
+                print(f"get_user_id - found in authorizer: {user_id}")
+                return str(user_id).strip()
         # 3. En enhancedAuthContext (template de API Gateway)
         if 'enhancedAuthContext' in event:
-            return event['enhancedAuthContext'].get('user_id')
+            user_id = event['enhancedAuthContext'].get('user_id')
+            if user_id:
+                print(f"get_user_id - found in enhancedAuthContext: {user_id}")
+                return str(user_id).strip()
         # 4. PrincipalId como fallback
         if 'principalId' in authorizer:
-            return authorizer.get('principalId')
+            user_id = authorizer.get('principalId')
+            if user_id:
+                print(f"get_user_id - found in principalId: {user_id}")
+                return str(user_id).strip()
+        
+        print("get_user_id - no user_id found")
         return None
     except Exception as e:
         print(f"Error getting user_id: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def get_user_email(event):

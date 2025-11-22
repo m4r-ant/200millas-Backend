@@ -32,6 +32,12 @@ def create_order(event, context):
     customer_id = get_user_id(event) or body.get('customer_id')
     customer_email = get_user_email(event) or body.get('customer_email')
     
+    # Normalizar customer_id (asegurar que sea string y sin espacios)
+    if customer_id:
+        customer_id = str(customer_id).strip()
+    if customer_email:
+        customer_email = str(customer_email).strip()
+    
     logger.info(f"Extracted - tenant_id: {tenant_id}, customer_id: {customer_id}, customer_email: {customer_email}")
 
     if not customer_id:
@@ -142,24 +148,50 @@ def _serialize_items(items):
 def get_orders(event, context):
     logger.info("Getting orders")
     
+    # Debug: Log del evento para ver la estructura
+    logger.info(f"Event keys: {list(event.keys())}")
+    if 'requestContext' in event:
+        logger.info(f"RequestContext keys: {list(event['requestContext'].keys())}")
+        if 'authorizer' in event['requestContext']:
+            logger.info(f"Authorizer keys: {list(event['requestContext']['authorizer'].keys())}")
+            logger.info(f"Authorizer content: {event['requestContext']['authorizer']}")
+    
     tenant_id = get_tenant_id(event)
     customer_id = get_user_id(event)
     
+    # Normalizar customer_id (asegurar que sea string y sin espacios)
+    if customer_id:
+        customer_id = str(customer_id).strip()
+    
     logger.info(f"Searching orders for - tenant_id: {tenant_id}, customer_id: {customer_id}")
+    
+    if not customer_id:
+        logger.warning("No customer_id found in token, cannot filter orders")
+        raise ValidationError("No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.")
     
     items = orders_db.query_items('tenant_id', tenant_id, index_name='tenant-created-index')
     
     logger.info(f"Total orders found for tenant: {len(items)}")
     
-    customer_orders = [
-        item for item in items 
-        if item.get('customer_id') == customer_id
-    ]
-    
     # Debug: mostrar customer_ids de todas las órdenes
     if items:
         all_customer_ids = [item.get('customer_id') for item in items]
         logger.info(f"Customer IDs in all orders: {all_customer_ids}")
+        logger.info(f"Looking for customer_id: '{customer_id}' (type: {type(customer_id).__name__})")
+        
+        # Mostrar detalles de cada orden para debug
+        for item in items:
+            item_customer_id = item.get('customer_id')
+            logger.info(f"Order {item.get('order_id')}: customer_id='{item_customer_id}' (type: {type(item_customer_id).__name__}), match={item_customer_id == customer_id}")
+    
+    # Comparar customer_ids normalizados (como strings)
+    customer_orders = []
+    for item in items:
+        item_customer_id = item.get('customer_id')
+        if item_customer_id:
+            item_customer_id = str(item_customer_id).strip()
+        if item_customer_id == customer_id:
+            customer_orders.append(item)
     
     for order in customer_orders:
         if 'total' in order:
