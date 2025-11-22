@@ -1,6 +1,7 @@
 import json
 import uuid
 import os
+import boto3
 from decimal import Decimal
 from shared.utils import (
     response, success_response, error_response, error_handler, 
@@ -13,15 +14,25 @@ from shared.logger import get_logger
 
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
+stepfunctions = boto3.client('stepfunctions')
 
 @error_handler
 def create_order(event, context):
     logger.info("Creating new order")
     
+    # Debug: Log del evento para ver la estructura
+    logger.info(f"Event keys: {list(event.keys())}")
+    if 'requestContext' in event:
+        logger.info(f"RequestContext keys: {list(event['requestContext'].keys())}")
+        if 'authorizer' in event['requestContext']:
+            logger.info(f"Authorizer keys: {list(event['requestContext']['authorizer'].keys())}")
+    
     body = parse_body(event)
     tenant_id = get_tenant_id(event)
     customer_id = get_user_id(event) or body.get('customer_id')
     customer_email = get_user_email(event) or body.get('customer_email')
+    
+    logger.info(f"Extracted - tenant_id: {tenant_id}, customer_id: {customer_id}, customer_email: {customer_email}")
 
     if not customer_id:
         raise ValidationError("customer_id es requerido (inicia sesión o inclúyelo en el body)")
@@ -69,6 +80,32 @@ def create_order(event, context):
         tenant_id=tenant_id
     )
     
+    # Iniciar Step Function para workflow automatizado
+    # Nota: El ARN se obtiene del output de CloudFormation después del deploy
+    try:
+        # Construir el ARN de la Step Function
+        region = os.environ.get('AWS_REGION', 'us-east-1')
+        account_id = context.invoked_function_arn.split(':')[4] if context else None
+        service_name = os.environ.get('SERVERLESS_SERVICE', 'millas-backend')
+        stage = os.environ.get('SERVERLESS_STAGE', 'dev')
+        
+        if account_id:
+            step_function_arn = f"arn:aws:states:{region}:{account_id}:stateMachine:{service_name}-{stage}-order-workflow"
+            stepfunctions.start_execution(
+                stateMachineArn=step_function_arn,
+                name=f"order-{order_id}",
+                input=json.dumps({
+                    'order_id': order_id,
+                    'tenant_id': tenant_id,
+                    'customer_id': customer_id,
+                    'customer_email': customer_email
+                })
+            )
+            logger.info(f"Step Function started for order {order_id}")
+    except Exception as e:
+        logger.warning(f"Could not start Step Function: {str(e)}")
+        # No fallar si Step Function no está disponible
+    
     logger.info(f"Order created: {order_id}")
     
     response_order = {
@@ -108,18 +145,27 @@ def get_orders(event, context):
     tenant_id = get_tenant_id(event)
     customer_id = get_user_id(event)
     
+    logger.info(f"Searching orders for - tenant_id: {tenant_id}, customer_id: {customer_id}")
+    
     items = orders_db.query_items('tenant_id', tenant_id, index_name='tenant-created-index')
+    
+    logger.info(f"Total orders found for tenant: {len(items)}")
     
     customer_orders = [
         item for item in items 
         if item.get('customer_id') == customer_id
     ]
     
+    # Debug: mostrar customer_ids de todas las órdenes
+    if items:
+        all_customer_ids = [item.get('customer_id') for item in items]
+        logger.info(f"Customer IDs in all orders: {all_customer_ids}")
+    
     for order in customer_orders:
         if 'total' in order:
             order['total'] = float(order['total'])
     
-    logger.info(f"Found {len(customer_orders)} orders")
+    logger.info(f"Found {len(customer_orders)} orders for customer_id: {customer_id}")
     
     return success_response(customer_orders)
 

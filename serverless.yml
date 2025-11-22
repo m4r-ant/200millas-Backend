@@ -14,10 +14,10 @@ provider:
     MENU_TABLE: ${sls:stage}-Menu
     USERS_TABLE: ${sls:stage}-Users
     TENANT_ID: 200millas
+    MENU_IMAGES_BUCKET: ${self:service}-${sls:stage}-menu-images
 
-plugins:
-  - serverless-python-requirements
-
+# serverless-python-requirements está incluido por defecto
+# Solo necesitamos la configuración custom
 custom:
   pythonRequirements:
     dockerizePip: true
@@ -123,6 +123,16 @@ functions:
           cors: true
           integration: lambda
 
+  uploadMenuImage:
+    handler: services/menu/upload_image.upload_image
+    events:
+      - http:
+          path: /menu/upload-image
+          method: post
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
   getDashboard:
     handler: services/dashboard/handler.get_dashboard
     events:
@@ -152,6 +162,27 @@ functions:
           cors: true
           integration: lambda
           authorizer: authorize
+
+  # Step Functions Handlers
+  confirmOrder:
+    handler: services/workflow/step_functions_handlers.confirm_order
+    timeout: 30
+
+  assignCook:
+    handler: services/workflow/step_functions_handlers.assign_cook
+    timeout: 30
+
+  completeCooking:
+    handler: services/workflow/step_functions_handlers.complete_cooking
+    timeout: 30
+
+  assignDriver:
+    handler: services/workflow/step_functions_handlers.assign_driver
+    timeout: 30
+
+  completeDelivery:
+    handler: services/workflow/step_functions_handlers.complete_delivery
+    timeout: 30
 
 resources:
   Resources:
@@ -224,3 +255,139 @@ resources:
           - AttributeName: email
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
+    # S3 Bucket para imágenes del menú
+    MenuImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.MENU_IMAGES_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - HEAD
+              AllowedOrigins:
+                - "*"
+              MaxAge: 3000
+
+    MenuImagesBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref MenuImagesBucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource: !Sub 
+                - "arn:aws:s3:::${BucketName}/*"
+                - BucketName: !Ref MenuImagesBucket
+
+    # Step Functions State Machine para workflow automatizado
+    OrderWorkflowStateMachine:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        StateMachineName: ${self:service}-${sls:stage}-order-workflow
+        RoleArn: arn:aws:iam::722204368591:role/LabRole
+        DefinitionString: !Sub |
+          {
+            "Comment": "Workflow automatizado para procesamiento de pedidos",
+            "StartAt": "ConfirmOrder",
+            "States": {
+              "ConfirmOrder": {
+                "Type": "Task",
+                "Resource": "${ConfirmOrderLambdaFunction.Arn}",
+                "ResultPath": "$.confirmResult",
+                "Next": "AssignCook"
+              },
+              "AssignCook": {
+                "Type": "Task",
+                "Resource": "${AssignCookLambdaFunction.Arn}",
+                "ResultPath": "$.cookResult",
+                "Next": "WaitForCooking"
+              },
+              "WaitForCooking": {
+                "Type": "Wait",
+                "Seconds": 300,
+                "Comment": "Espera 5 minutos para cocinar (puede ser ajustado o reemplazado por callback)",
+                "Next": "CompleteCooking"
+              },
+              "CompleteCooking": {
+                "Type": "Task",
+                "Resource": "${CompleteCookingLambdaFunction.Arn}",
+                "ResultPath": "$.cookingResult",
+                "Next": "WaitForPacking"
+              },
+              "WaitForPacking": {
+                "Type": "Wait",
+                "Seconds": 120,
+                "Comment": "Espera 2 minutos para empacar",
+                "Next": "AssignDriver"
+              },
+              "AssignDriver": {
+                "Type": "Task",
+                "Resource": "${AssignDriverLambdaFunction.Arn}",
+                "ResultPath": "$.driverResult",
+                "Next": "WaitForDelivery"
+              },
+              "WaitForDelivery": {
+                "Type": "Wait",
+                "Seconds": 600,
+                "Comment": "Espera 10 minutos para entrega (simulado)",
+                "Next": "CompleteDelivery"
+              },
+              "CompleteDelivery": {
+                "Type": "Task",
+                "Resource": "${CompleteDeliveryLambdaFunction.Arn}",
+                "ResultPath": "$.deliveryResult",
+                "End": true
+              }
+            }
+          }
+
+    # Nota: Usamos el rol IAM existente (LabRole) en lugar de crear uno nuevo
+    # El rol LabRole debe tener los siguientes permisos:
+    # - lambda:InvokeFunction (para las funciones del Step Function)
+    # - dynamodb:GetItem, PutItem, UpdateItem, Query (para DynamoDB)
+    # - events:PutEvents (para EventBridge)
+    # - s3:GetObject, PutObject (para S3)
+    # Y debe permitir que Step Functions lo asuma (Trust Relationship con states.amazonaws.com)
+
+  # Outputs
+outputs:
+  OrderWorkflowStateMachineArn:
+    Description: ARN de la Step Function para workflow de pedidos
+    Value: !Ref OrderWorkflowStateMachine
+    Export:
+      Name: ${self:service}-${sls:stage}-OrderWorkflowArn
+
+  MenuImagesBucketName:
+    Description: Nombre del bucket S3 para imágenes del menú
+    Value: !Ref MenuImagesBucket
+    Export:
+      Name: ${self:service}-${sls:stage}-MenuImagesBucket
+
+  ApiGatewayRestApiId:
+    Description: API Gateway REST API ID
+    Value:
+      Ref: ApiGatewayRestApi
+    Export:
+      Name: ${self:service}-${sls:stage}-ApiGatewayId
+
+  ApiGatewayRestApiRootResourceId:
+    Description: API Gateway Root Resource ID
+    Value:
+      Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId

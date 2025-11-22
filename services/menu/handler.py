@@ -1,8 +1,25 @@
 import os
+import boto3
 from shared.utils import success_response, error_handler
 from shared.logger import get_logger
 
 logger = get_logger(__name__)
+s3_client = boto3.client('s3')
+MENU_IMAGES_BUCKET = os.environ.get('MENU_IMAGES_BUCKET', '')
+
+def _get_image_url(image_name):
+    """Genera URL pública de S3 para imagen del menú"""
+    if not MENU_IMAGES_BUCKET or not image_name:
+        return None
+    
+    try:
+        # URL pública de S3
+        region = os.environ.get('AWS_REGION', 'us-east-1')
+        url = f"https://{MENU_IMAGES_BUCKET}.s3.{region}.amazonaws.com/{image_name}"
+        return url
+    except Exception as e:
+        logger.warning(f"Error generating image URL: {str(e)}")
+        return None
 
 MENU_DATA = {
     'categories': [
@@ -95,6 +112,11 @@ def get_items(event, context):
         ]
     
     items = [item for item in items if item.get('available', True)]
+    
+    # Agregar URLs de S3 para las imágenes
+    for item in items:
+        if item.get('image'):
+            item['image_url'] = _get_image_url(item['image'])
     
     logger.info(f"Found {len(items)} menu items")
     

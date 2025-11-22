@@ -147,4 +147,15 @@ def get_staff_performance(event, context):
     
     return success_response(list(staff_stats.values()))
 
-def _
+def _format_duration(seconds):
+    """Formatea duración en segundos a formato legible"""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        minutes = seconds // 60
+        secs = seconds % 60
+        return f"{minutes}m {secs}s"
+    else:
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        return f"{hours}h {minutes}m"
