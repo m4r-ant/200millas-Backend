@@ -1,5 +1,5 @@
 import boto3
-import os
+from boto3.dynamodb.conditions import Key
 
 dynamodb = boto3.resource('dynamodb')
 
@@ -43,12 +43,16 @@ class DynamoDBService:
             print(f"Error en update_item: {str(e)}")
             return None
     
-    def query_items(self, partition_key, partition_value):
+    def query_items(self, partition_key, partition_value, index_name=None):
         try:
-            response = self.table.query(
-                KeyConditionExpression=f'{partition_key} = :{partition_key}',
-                ExpressionAttributeValues={f':{partition_key}': partition_value}
-            )
+            params = {
+                'KeyConditionExpression': Key(partition_key).eq(partition_value)
+            }
+
+            if index_name:
+                params['IndexName'] = index_name
+
+            response = self.table.query(**params)
             return response.get('Items', [])
         except Exception as e:
             print(f"Error en query_items: {str(e)}")

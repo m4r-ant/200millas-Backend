@@ -14,7 +14,7 @@ def get_dashboard(event, context):
     
     tenant_id = get_tenant_id(event)
     
-    all_orders = orders_db.query_items('tenant_id', tenant_id)
+    all_orders = orders_db.query_items('tenant_id', tenant_id, index_name='tenant-created-index')
     
     metrics = {
         'total_orders': len(all_orders),

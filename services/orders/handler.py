@@ -20,8 +20,11 @@ def create_order(event, context):
     
     body = parse_body(event)
     tenant_id = get_tenant_id(event)
-    customer_id = get_user_id(event)
-    customer_email = get_user_email(event)
+    customer_id = get_user_id(event) or body.get('customer_id')
+    customer_email = get_user_email(event) or body.get('customer_email')
+
+    if not customer_id:
+        raise ValidationError("customer_id es requerido (inicia sesión o inclúyelo en el body)")
     
     items = body.get('items', [])
     if not items or len(items) == 0:
@@ -34,12 +37,14 @@ def create_order(event, context):
     order_id = str(uuid.uuid4())
     timestamp = current_timestamp()
     
+    normalized_items = _normalize_items(items)
+
     order = {
         'order_id': order_id,
         'tenant_id': tenant_id,
         'customer_id': customer_id,
         'customer_email': customer_email,
-        'items': items,
+        'items': normalized_items,
         'status': 'pending',
         'total': Decimal(str(total)),
         'created_at': timestamp,
@@ -66,9 +71,35 @@ def create_order(event, context):
     
     logger.info(f"Order created: {order_id}")
     
-    order['total'] = float(order['total'])
+    response_order = {
+        **order,
+        'total': float(order['total']),
+        'items': _serialize_items(order['items'])
+    }
     
-    return success_response(order, 201)
+    return success_response(response_order, 201)
+
+
+def _normalize_items(items):
+    normalized = []
+    for item in items:
+        normalized_item = dict(item)
+        if 'price' in normalized_item:
+            normalized_item['price'] = Decimal(str(normalized_item['price']))
+        if 'quantity' in normalized_item:
+            normalized_item['quantity'] = int(normalized_item['quantity'])
+        normalized.append(normalized_item)
+    return normalized
+
+
+def _serialize_items(items):
+    serialized = []
+    for item in items:
+        serialized_item = dict(item)
+        if 'price' in serialized_item:
+            serialized_item['price'] = float(serialized_item['price'])
+        serialized.append(serialized_item)
+    return serialized
 
 @error_handler
 def get_orders(event, context):
@@ -77,7 +108,7 @@ def get_orders(event, context):
     tenant_id = get_tenant_id(event)
     customer_id = get_user_id(event)
     
-    items = orders_db.query_items('tenant_id', tenant_id)
+    items = orders_db.query_items('tenant_id', tenant_id, index_name='tenant-created-index')
     
     customer_orders = [
         item for item in items 

@@ -12,6 +12,7 @@ provider:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
     MENU_TABLE: ${sls:stage}-Menu
+    USERS_TABLE: ${sls:stage}-Users
     TENANT_ID: 200millas
 
 plugins:
@@ -28,6 +29,15 @@ functions:
     events:
       - http:
           path: /auth/login
+          method: post
+          cors: true
+          integration: lambda
+
+  register:
+    handler: services/auth/handler.register
+    events:
+      - http:
+          path: /auth/register
           method: post
           cors: true
           integration: lambda
@@ -201,4 +211,16 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
         BillingMode: PAY_PER_REQUEST

@@ -13,7 +13,9 @@ def response(status_code, body):
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
             'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
         },
-        'body': json.dumps(body)
+        'body': json.dumps(body),
+        # Campo adicional para facilitar la lectura cuando se invoca la Lambda directamente
+        'body_json': body
     }
 
 def success_response(data, status_code=200):

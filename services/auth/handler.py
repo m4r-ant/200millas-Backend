@@ -4,28 +4,54 @@ from shared.utils import (
     parse_body, current_timestamp
 )
 from shared.security import create_access_token, verify_token, hash_password
-from shared.errors import UnauthorizedError, ValidationError
+from shared.errors import UnauthorizedError, ValidationError, ConflictError
 from shared.logger import get_logger
+from shared.dynamodb import DynamoDBService
 
 logger = get_logger(__name__)
+users_db = DynamoDBService(os.environ.get('USERS_TABLE'))
 
-USERS_DB = {
-    'customer@200millas.com': {
-        'password': hash_password('password123'),
-        'user_type': 'customer',
-        'name': 'Cliente 200 Millas'
-    },
-    'chef@200millas.com': {
-        'password': hash_password('password123'),
-        'user_type': 'staff',
-        'name': 'Chef Juan'
-    },
-    'admin@200millas.com': {
-        'password': hash_password('admin123'),
-        'user_type': 'admin',
-        'name': 'Admin'
+
+@error_handler
+def register(event, context):
+    logger.info("Register attempt")
+
+    body = parse_body(event)
+    email = body.get('email', '').strip().lower()
+    password = body.get('password', '')
+    name = body.get('name', '').strip()
+    user_type = body.get('user_type', 'customer')
+
+    if not email or not password or not name:
+        raise ValidationError("email, password y name son requeridos")
+
+    if '@' not in email:
+        raise ValidationError("Email inválido")
+
+    if len(password) < 6:
+        raise ValidationError("El password debe tener al menos 6 caracteres")
+
+    if user_type not in ['customer', 'staff', 'admin']:
+        raise ValidationError("user_type inválido")
+
+    existing = users_db.get_item({'email': email})
+    if existing:
+        raise ConflictError("El email ya está registrado")
+
+    user = {
+        'email': email,
+        'name': name,
+        'user_type': user_type,
+        'tenant_id': os.environ.get('TENANT_ID', '200millas'),
+        'password': hash_password(password),
+        'created_at': current_timestamp()
     }
-}
+
+    users_db.put_item(user)
+
+    logger.info(f"User registered {email}")
+
+    return success_response({'message': 'Usuario creado correctamente'}, 201)
 
 @error_handler
 def login(event, context):
@@ -41,7 +67,7 @@ def login(event, context):
     if '@' not in email:
         raise ValidationError("Email inválido")
     
-    user = USERS_DB.get(email)
+    user = users_db.get_item({'email': email})
     if not user or not _verify_password(password, user['password']):
         logger.warning(f"Login failed for {email}")
         raise UnauthorizedError("Email o password incorrecto")
