@@ -1,0 +1,196 @@
+org: m4rant
+service: millas-backend
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::722204368591:role/LabRole
+  environment:
+    ORDERS_TABLE: ${sls:stage}-Orders
+    WORKFLOW_TABLE: ${sls:stage}-Workflow
+    MENU_TABLE: ${sls:stage}-Menu
+    TENANT_ID: 200millas
+
+functions:
+  login:
+    handler: services/auth/handler.login
+    events:
+      - http:
+          path: /auth/login
+          method: post
+          cors: true
+          integration: lambda
+
+  authorize:
+    handler: services/auth/handler.authorize
+
+  logout:
+    handler: services/auth/handler.logout
+    events:
+      - http:
+          path: /auth/logout
+          method: post
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  createOrder:
+    handler: services/orders/handler.create_order
+    events:
+      - http:
+          path: /orders
+          method: post
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getOrders:
+    handler: services/orders/handler.get_orders
+    events:
+      - http:
+          path: /orders
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getOrder:
+    handler: services/orders/handler.get_order
+    events:
+      - http:
+          path: /orders/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  updateWorkflow:
+    handler: services/workflow/handler.update_workflow
+    events:
+      - http:
+          path: /workflow/{order_id}
+          method: patch
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getWorkflow:
+    handler: services/workflow/handler.get_workflow
+    events:
+      - http:
+          path: /workflow/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getCategories:
+    handler: services/menu/handler.get_categories
+    events:
+      - http:
+          path: /menu/categories
+          method: get
+          cors: true
+          integration: lambda
+
+  getItems:
+    handler: services/menu/handler.get_items
+    events:
+      - http:
+          path: /menu/items
+          method: get
+          cors: true
+          integration: lambda
+
+  getDashboard:
+    handler: services/dashboard/handler.get_dashboard
+    events:
+      - http:
+          path: /dashboard
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getOrderTimeline:
+    handler: services/dashboard/handler.get_order_timeline
+    events:
+      - http:
+          path: /dashboard/timeline/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+  getStaffPerformance:
+    handler: services/dashboard/handler.get_staff_performance
+    events:
+      - http:
+          path: /dashboard/staff-performance
+          method: get
+          cors: true
+          integration: lambda
+          authorizer: authorize
+
+resources:
+  Resources:
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ORDERS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: order_id
+            AttributeType: S
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: created_at
+            AttributeType: N
+        KeySchema:
+          - AttributeName: order_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: tenant-created-index
+            KeySchema:
+              - AttributeName: tenant_id
+                KeyType: HASH
+              - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    WorkflowTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.WORKFLOW_TABLE}
+        AttributeDefinitions:
+          - AttributeName: order_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: order_id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    MenuTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.MENU_TABLE}
+        AttributeDefinitions:
+          - AttributeName: item_id
+            AttributeType: S
+          - AttributeName: category
+            AttributeType: S
+        KeySchema:
+          - AttributeName: item_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: category-index
+            KeySchema:
+              - AttributeName: category
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
