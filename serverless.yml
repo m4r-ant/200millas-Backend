@@ -14,6 +14,14 @@ provider:
     MENU_TABLE: ${sls:stage}-Menu
     TENANT_ID: 200millas
 
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer: false
+
 functions:
   login:
     handler: services/auth/handler.login
