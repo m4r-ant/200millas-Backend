@@ -57,7 +57,11 @@ functions:
           method: post
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   createOrder:
     handler: services/orders/handler.create_order
@@ -89,7 +93,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getOrder:
     handler: services/orders/handler.get_order
@@ -99,7 +107,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   updateWorkflow:
     handler: services/workflow/handler.update_workflow
@@ -109,7 +121,11 @@ functions:
           method: patch
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getWorkflow:
     handler: services/workflow/handler.get_workflow
@@ -119,7 +135,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getCategories:
     handler: services/menu/handler.get_categories
@@ -147,7 +167,11 @@ functions:
           method: post
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getDashboard:
     handler: services/dashboard/handler.get_dashboard
@@ -157,7 +181,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getOrderTimeline:
     handler: services/dashboard/handler.get_order_timeline
@@ -167,7 +195,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getStaffPerformance:
     handler: services/dashboard/handler.get_staff_performance
@@ -177,7 +209,11 @@ functions:
           method: get
           cors: true
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   # Step Functions Handlers
   confirmOrder:
@@ -203,6 +239,21 @@ functions:
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
     timeout: 30
+
+  # WebSocket API para seguimiento en tiempo real
+  # Nota: WebSocket requiere configuración manual adicional o plugin serverless-websocket-plugin
+  # Por ahora, las funciones están listas pero el API Gateway WebSocket debe configurarse manualmente
+  websocketConnect:
+    handler: services/websocket/handler.connect
+    timeout: 10
+
+  websocketDisconnect:
+    handler: services/websocket/handler.disconnect
+    timeout: 10
+
+  websocketDefault:
+    handler: services/websocket/handler.default
+    timeout: 10
 
 resources:
   Resources:
@@ -340,9 +391,7 @@ resources:
       Properties:
         Name: ${self:service}-${sls:stage}-event-bus
 
-    # EventBridge Rule para capturar eventos de pedidos
-    # Nota: La regla está simplificada sin targets. Los eventos se pueden ver en la consola de EventBridge
-    # Si necesitas capturar eventos en CloudWatch Logs, configura un target de Lambda que escriba los logs
+    # EventBridge Rule para capturar eventos de pedidos y workflow
     OrderEventsRule:
       Type: AWS::Events::Rule
       Properties:
@@ -350,10 +399,18 @@ resources:
         EventPattern:
           source:
             - orders.service
+            - workflow.service
           detail-type:
             - OrderCreated
             - OrderUpdated
+            - OrderConfirmed
+            - OrderCooking
+            - OrderPacking
+            - OrderInDelivery
+            - OrderDelivered
+            - OrderFailed
         State: ENABLED
+        Description: Captura todos los eventos relacionados con pedidos y workflow
 
     # Step Functions State Machine para workflow automatizado
     OrderWorkflowStateMachine:
@@ -511,14 +568,36 @@ resources:
     # - s3:GetObject, PutObject (para S3)
     # Y debe permitir que Step Functions lo asuma (Trust Relationship con states.amazonaws.com)
 
-  # Outputs
+  # Outputs - Recursos creados para verificación
 outputs:
+  # API Gateway
+  ApiGatewayRestApiId:
+    Description: API Gateway REST API ID
+    Value:
+      Ref: ApiGatewayRestApi
+    Export:
+      Name: ${self:service}-${sls:stage}-ApiGatewayId
+
+  ApiGatewayRestApiUrl:
+    Description: URL base de la API Gateway
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
+    Export:
+      Name: ${self:service}-${sls:stage}-ApiGatewayUrl
+
+  # Step Functions
   OrderWorkflowStateMachineArn:
     Description: ARN de la Step Function para workflow de pedidos
     Value: !Ref OrderWorkflowStateMachine
     Export:
       Name: ${self:service}-${sls:stage}-OrderWorkflowArn
 
+  OrderWorkflowStateMachineName:
+    Description: Nombre de la Step Function
+    Value: !GetAtt OrderWorkflowStateMachine.Name
+    Export:
+      Name: ${self:service}-${sls:stage}-OrderWorkflowName
+
+  # EventBridge
   CustomEventBusName:
     Description: Nombre del Event Bus personalizado
     Value: !Ref CustomEventBus
@@ -531,22 +610,47 @@ outputs:
     Export:
       Name: ${self:service}-${sls:stage}-EventBusArn
 
+  # DynamoDB Tables
+  OrdersTableName:
+    Description: Nombre de la tabla de pedidos
+    Value: !Ref OrdersTable
+    Export:
+      Name: ${self:service}-${sls:stage}-OrdersTable
+
+  WorkflowTableName:
+    Description: Nombre de la tabla de workflow
+    Value: !Ref WorkflowTable
+    Export:
+      Name: ${self:service}-${sls:stage}-WorkflowTable
+
+  MenuTableName:
+    Description: Nombre de la tabla de menú
+    Value: !Ref MenuTable
+    Export:
+      Name: ${self:service}-${sls:stage}-MenuTable
+
+  UsersTableName:
+    Description: Nombre de la tabla de usuarios
+    Value: !Ref UsersTable
+    Export:
+      Name: ${self:service}-${sls:stage}-UsersTable
+
+  # S3
   MenuImagesBucketName:
     Description: Nombre del bucket S3 para imágenes del menú
     Value: !Ref MenuImagesBucket
     Export:
       Name: ${self:service}-${sls:stage}-MenuImagesBucket
 
-  ApiGatewayRestApiId:
-    Description: API Gateway REST API ID
-    Value:
-      Ref: ApiGatewayRestApi
+  # Lambda Functions (ejemplos principales)
+  CreateOrderFunctionName:
+    Description: Nombre de la función Lambda createOrder
+    Value: !GetAtt CreateOrderLambdaFunction.FunctionName
     Export:
-      Name: ${self:service}-${sls:stage}-ApiGatewayId
+      Name: ${self:service}-${sls:stage}-CreateOrderFunction
 
-  ApiGatewayRestApiRootResourceId:
-    Description: API Gateway Root Resource ID
-    Value:
-      Fn::GetAtt:
-        - ApiGatewayRestApi
-        - RootResourceId
+  LoginFunctionName:
+    Description: Nombre de la función Lambda login
+    Value: !GetAtt LoginLambdaFunction.FunctionName
+    Export:
+      Name: ${self:service}-${sls:stage}-LoginFunction

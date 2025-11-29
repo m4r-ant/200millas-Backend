@@ -97,8 +97,18 @@ def logout(event, context):
 
 def authorize(event, context):
     """Autorizador Lambda para API Gateway - IMPORTANTE: context debe contener solo strings"""
-    token = event.get('authorizationToken', '').replace('Bearer ', '')
-    method_arn = event.get('methodArn')
+    logger.info(f"Authorizer invoked. Event keys: {list(event.keys())}")
+    
+    # El token puede venir con o sin "Bearer " prefix
+    token = event.get('authorizationToken', '')
+    if token.startswith('Bearer '):
+        token = token.replace('Bearer ', '')
+    token = token.strip()
+    
+    method_arn = event.get('methodArn', '')
+    
+    logger.info(f"Token received: {token[:20]}... (length: {len(token)})")
+    logger.info(f"Method ARN: {method_arn}")
     
     if not token:
         logger.warning("No authorization token provided")
@@ -106,9 +116,21 @@ def authorize(event, context):
     
     try:
         payload = verify_token(token)
+        logger.info(f"Token verified successfully. User ID: {payload.get('user_id')}, Email: {payload.get('email')}")
+        
+        # Construir ARN base para permitir acceso a todos los métodos del API
+        # method_arn formato: arn:aws:execute-api:region:account-id:api-id/stage/method/resource-path
+        arn_parts = method_arn.split('/')
+        if len(arn_parts) >= 2:
+            # Permitir acceso a todos los métodos del API en este stage
+            api_arn = f"{arn_parts[0]}/{arn_parts[1]}/*"
+        else:
+            api_arn = method_arn
+        
+        logger.info(f"Allowing access to: {api_arn}")
         
         # ✅ CORRECCIÓN CRÍTICA: API Gateway requiere que todos los valores en context sean STRINGS
-        return {
+        response = {
             'principalId': str(payload['user_id']),
             'policyDocument': {
                 'Version': '2012-10-17',
@@ -116,7 +138,7 @@ def authorize(event, context):
                     {
                         'Action': 'execute-api:Invoke',
                         'Effect': 'Allow',
-                        'Resource': method_arn
+                        'Resource': api_arn
                     }
                 ]
             },
@@ -128,11 +150,17 @@ def authorize(event, context):
                 'user_type': str(payload['user_type'])
             }
         }
+        
+        logger.info(f"Authorization successful. Context: {response['context']}")
+        return response
+        
     except UnauthorizedError as e:
         logger.warning(f"Authorization failed: {str(e)}")
         raise Exception('Unauthorized')
     except Exception as e:
         logger.error(f"Unexpected error in authorization: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise Exception('Unauthorized')
 
 def _verify_password(password, hashed):

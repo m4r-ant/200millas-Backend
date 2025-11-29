@@ -54,22 +54,40 @@ def get_tenant_id(event):
 def get_user_id(event):
     """Extrae user_id del contexto del autorizador"""
     try:
+        # Debug: Log completo del evento para diagnóstico
+        logger.info(f"get_user_id - Event keys: {list(event.keys())}")
+        
+        request_context = event.get('requestContext', {})
+        logger.info(f"get_user_id - RequestContext keys: {list(request_context.keys())}")
+        
         # API Gateway REST pone el context directamente en requestContext.authorizer
-        authorizer = event.get('requestContext', {}).get('authorizer', {})
+        authorizer = request_context.get('authorizer', {})
+        logger.info(f"get_user_id - Authorizer keys: {list(authorizer.keys())}")
+        logger.info(f"get_user_id - Authorizer content: {authorizer}")
+        
         user_id = authorizer.get('user_id')
+        logger.info(f"get_user_id - user_id from context: {user_id}")
         
         if user_id:
-            return str(user_id).strip()
+            result = str(user_id).strip()
+            logger.info(f"get_user_id - Returning user_id: {result}")
+            return result
         
         # Fallback: principalId
         principal = authorizer.get('principalId')
+        logger.info(f"get_user_id - principalId from context: {principal}")
         if principal:
-            return str(principal).strip()
+            result = str(principal).strip()
+            logger.info(f"get_user_id - Returning principalId: {result}")
+            return result
             
         logger.warning("No user_id found in authorizer context")
+        logger.warning(f"Full authorizer object: {authorizer}")
         return None
     except Exception as e:
         logger.error(f"Error getting user_id: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 def get_user_email(event):
