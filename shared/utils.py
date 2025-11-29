@@ -2,6 +2,9 @@ import json
 import os
 from datetime import datetime
 from shared.errors import CustomError
+from shared.logger import get_logger
+
+logger = get_logger(__name__)
 
 def response(status_code, body):
     """Respuesta HTTP estándar con CORS"""
@@ -35,80 +38,52 @@ def error_response(error, status_code=500):
 def get_tenant_id(event):
     """Extrae tenant_id del contexto del autorizador"""
     try:
+        # API Gateway REST pone el context directamente en requestContext.authorizer
         authorizer = event.get('requestContext', {}).get('authorizer', {})
-        # Intentar diferentes ubicaciones
-        if 'context' in authorizer:
-            tenant = authorizer['context'].get('tenant_id')
-            if tenant:
-                return tenant
-        if 'tenant_id' in authorizer:
-            return authorizer.get('tenant_id')
-        if 'enhancedAuthContext' in event:
-            tenant = event['enhancedAuthContext'].get('tenant_id')
-            if tenant:
-                return tenant
+        tenant_id = authorizer.get('tenant_id')
+        
+        if tenant_id:
+            return str(tenant_id).strip()
+            
+        # Fallback: variable de entorno
         return os.environ.get('TENANT_ID', '200millas')
-    except:
+    except Exception as e:
+        logger.error(f"Error getting tenant_id: {str(e)}")
         return os.environ.get('TENANT_ID', '200millas')
 
 def get_user_id(event):
     """Extrae user_id del contexto del autorizador"""
     try:
+        # API Gateway REST pone el context directamente en requestContext.authorizer
         authorizer = event.get('requestContext', {}).get('authorizer', {})
+        user_id = authorizer.get('user_id')
         
-        # Debug logging
-        print(f"get_user_id - authorizer keys: {list(authorizer.keys()) if authorizer else 'None'}")
-        if 'context' in authorizer:
-            print(f"get_user_id - context keys: {list(authorizer['context'].keys()) if authorizer.get('context') else 'None'}")
+        if user_id:
+            return str(user_id).strip()
         
-        # Intentar diferentes ubicaciones donde puede estar el user_id
-        # 1. En context (cuando viene de Lambda authorizer)
-        if 'context' in authorizer:
-            user_id = authorizer['context'].get('user_id')
-            if user_id:
-                print(f"get_user_id - found in context: {user_id}")
-                return str(user_id).strip()
-        # 2. Directamente en authorizer
-        if 'user_id' in authorizer:
-            user_id = authorizer.get('user_id')
-            if user_id:
-                print(f"get_user_id - found in authorizer: {user_id}")
-                return str(user_id).strip()
-        # 3. En enhancedAuthContext (template de API Gateway)
-        if 'enhancedAuthContext' in event:
-            user_id = event['enhancedAuthContext'].get('user_id')
-            if user_id:
-                print(f"get_user_id - found in enhancedAuthContext: {user_id}")
-                return str(user_id).strip()
-        # 4. PrincipalId como fallback
-        if 'principalId' in authorizer:
-            user_id = authorizer.get('principalId')
-            if user_id:
-                print(f"get_user_id - found in principalId: {user_id}")
-                return str(user_id).strip()
-        
-        print("get_user_id - no user_id found")
+        # Fallback: principalId
+        principal = authorizer.get('principalId')
+        if principal:
+            return str(principal).strip()
+            
+        logger.warning("No user_id found in authorizer context")
         return None
     except Exception as e:
-        print(f"Error getting user_id: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error getting user_id: {str(e)}")
         return None
 
 def get_user_email(event):
     """Extrae email del contexto del autorizador"""
     try:
+        # API Gateway REST pone el context directamente en requestContext.authorizer
         authorizer = event.get('requestContext', {}).get('authorizer', {})
-        # Intentar diferentes ubicaciones
-        if 'context' in authorizer:
-            return authorizer['context'].get('email')
-        if 'email' in authorizer:
-            return authorizer.get('email')
-        if 'enhancedAuthContext' in event:
-            return event['enhancedAuthContext'].get('email')
+        email = authorizer.get('email')
+        
+        if email:
+            return str(email).strip()
         return None
     except Exception as e:
-        print(f"Error getting email: {str(e)}")
+        logger.error(f"Error getting email: {str(e)}")
         return None
 
 def parse_body(event):

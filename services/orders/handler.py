@@ -47,9 +47,47 @@ def create_order(event, context):
     if not items or len(items) == 0:
         raise ValidationError("Debe incluir al menos un item en el pedido")
     
+    # ✅ Validar estructura de items
+    for idx, item in enumerate(items):
+        if not item.get('item_id'):
+            raise ValidationError(f"Item {idx + 1}: item_id es requerido")
+        if not item.get('name'):
+            raise ValidationError(f"Item {idx + 1}: name es requerido")
+        if 'price' not in item:
+            raise ValidationError(f"Item {idx + 1}: price es requerido")
+        if 'quantity' not in item:
+            raise ValidationError(f"Item {idx + 1}: quantity es requerido")
+        
+        try:
+            price = float(item['price'])
+            quantity = int(item['quantity'])
+            if price <= 0:
+                raise ValidationError(f"Item {idx + 1}: price debe ser mayor a 0")
+            if quantity <= 0:
+                raise ValidationError(f"Item {idx + 1}: quantity debe ser mayor a 0")
+        except (ValueError, TypeError):
+            raise ValidationError(f"Item {idx + 1}: price o quantity inválido")
+    
+    # ✅ Validar que el total coincida con los items
+    calculated_total = sum(
+        float(item['price']) * int(item['quantity'])
+        for item in items
+    )
+    
     total = body.get('total', 0)
+    try:
+        total = float(total)
+    except (ValueError, TypeError):
+        raise ValidationError("Total inválido")
+    
     if total <= 0:
         raise ValidationError("El total debe ser mayor a 0")
+    
+    # ✅ Verificar que el total enviado coincida con el calculado (tolerancia de 0.01)
+    if abs(total - calculated_total) > 0.01:
+        raise ValidationError(
+            f"El total enviado ({total}) no coincide con el calculado ({calculated_total:.2f})"
+        )
     
     order_id = str(uuid.uuid4())
     timestamp = current_timestamp()
@@ -87,27 +125,26 @@ def create_order(event, context):
     )
     
     # Iniciar Step Function para workflow automatizado
-    # Nota: El ARN se obtiene del output de CloudFormation después del deploy
     try:
-        # Construir el ARN de la Step Function
+        # ✅ Construir ARN dinámicamente usando variables de entorno
         region = os.environ.get('AWS_REGION', 'us-east-1')
-        account_id = context.invoked_function_arn.split(':')[4] if context else None
+        account_id = os.environ.get('AWS_ACCOUNT_ID', '722204368591')
         service_name = os.environ.get('SERVERLESS_SERVICE', 'millas-backend')
         stage = os.environ.get('SERVERLESS_STAGE', 'dev')
         
-        if account_id:
-            step_function_arn = f"arn:aws:states:{region}:{account_id}:stateMachine:{service_name}-{stage}-order-workflow"
-            stepfunctions.start_execution(
-                stateMachineArn=step_function_arn,
-                name=f"order-{order_id}",
-                input=json.dumps({
-                    'order_id': order_id,
-                    'tenant_id': tenant_id,
-                    'customer_id': customer_id,
-                    'customer_email': customer_email
-                })
-            )
-            logger.info(f"Step Function started for order {order_id}")
+        step_function_arn = f"arn:aws:states:{region}:{account_id}:stateMachine:{service_name}-{stage}-order-workflow"
+        
+        stepfunctions.start_execution(
+            stateMachineArn=step_function_arn,
+            name=f"order-{order_id}",
+            input=json.dumps({
+                'order_id': order_id,
+                'tenant_id': tenant_id,
+                'customer_id': customer_id,
+                'customer_email': customer_email
+            })
+        )
+        logger.info(f"Step Function started for order {order_id}")
     except Exception as e:
         logger.warning(f"Could not start Step Function: {str(e)}")
         # No fallar si Step Function no está disponible
@@ -169,37 +206,23 @@ def get_orders(event, context):
         logger.warning("No customer_id found in token, cannot filter orders")
         raise ValidationError("No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.")
     
-    items = orders_db.query_items('tenant_id', tenant_id, index_name='tenant-created-index')
+    # ✅ USAR ÍNDICE DIRECTO EN LUGAR DE FILTRAR EN MEMORIA
+    items = orders_db.query_items(
+        'customer_id',
+        customer_id,
+        index_name='customer-orders-index'
+    )
     
-    logger.info(f"Total orders found for tenant: {len(items)}")
-    
-    # Debug: mostrar customer_ids de todas las órdenes
-    if items:
-        all_customer_ids = [item.get('customer_id') for item in items]
-        logger.info(f"Customer IDs in all orders: {all_customer_ids}")
-        logger.info(f"Looking for customer_id: '{customer_id}' (type: {type(customer_id).__name__})")
-        
-        # Mostrar detalles de cada orden para debug
-        for item in items:
-            item_customer_id = item.get('customer_id')
-            logger.info(f"Order {item.get('order_id')}: customer_id='{item_customer_id}' (type: {type(item_customer_id).__name__}), match={item_customer_id == customer_id}")
-    
-    # Comparar customer_ids normalizados (como strings)
-    customer_orders = []
-    for item in items:
-        item_customer_id = item.get('customer_id')
-        if item_customer_id:
-            item_customer_id = str(item_customer_id).strip()
-        if item_customer_id == customer_id:
-            customer_orders.append(item)
-    
-    for order in customer_orders:
+    # Serializar Decimals
+    for order in items:
         if 'total' in order:
             order['total'] = float(order['total'])
+        if 'items' in order:
+            order['items'] = _serialize_items(order['items'])
     
-    logger.info(f"Found {len(customer_orders)} orders for customer_id: {customer_id}")
+    logger.info(f"Found {len(items)} orders for customer_id: {customer_id}")
     
-    return success_response(customer_orders)
+    return success_response(items)
 
 @error_handler
 def get_order(event, context):

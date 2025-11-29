@@ -96,17 +96,20 @@ def logout(event, context):
     return success_response({'message': 'Sesión cerrada correctamente'})
 
 def authorize(event, context):
+    """Autorizador Lambda para API Gateway - IMPORTANTE: context debe contener solo strings"""
     token = event.get('authorizationToken', '').replace('Bearer ', '')
     method_arn = event.get('methodArn')
     
     if not token:
-        raise UnauthorizedError("Token no proporcionado")
+        logger.warning("No authorization token provided")
+        raise Exception('Unauthorized')
     
     try:
         payload = verify_token(token)
         
+        # ✅ CORRECCIÓN CRÍTICA: API Gateway requiere que todos los valores en context sean STRINGS
         return {
-            'principalId': payload['user_id'],
+            'principalId': str(payload['user_id']),
             'policyDocument': {
                 'Version': '2012-10-17',
                 'Statement': [
@@ -118,14 +121,18 @@ def authorize(event, context):
                 ]
             },
             'context': {
-                'user_id': payload['user_id'],
-                'email': payload['email'],
-                'tenant_id': payload['tenant_id'],
-                'user_type': payload['user_type']
+                # ✅ IMPORTANTE: Todo debe ser STRING (no dict, no int, no objetos complejos)
+                'user_id': str(payload['user_id']),
+                'email': str(payload['email']),
+                'tenant_id': str(payload['tenant_id']),
+                'user_type': str(payload['user_type'])
             }
         }
     except UnauthorizedError as e:
         logger.warning(f"Authorization failed: {str(e)}")
+        raise Exception('Unauthorized')
+    except Exception as e:
+        logger.error(f"Unexpected error in authorization: {str(e)}")
         raise Exception('Unauthorized')
 
 def _verify_password(password, hashed):

@@ -5,7 +5,7 @@ provider:
   name: aws
   runtime: python3.12
   memorySize: 1024
-  timeout: 30
+  timeout: 29
   iam:
     role: arn:aws:iam::722204368591:role/LabRole
   environment:
@@ -15,6 +15,10 @@ provider:
     USERS_TABLE: ${sls:stage}-Users
     TENANT_ID: 200millas
     MENU_IMAGES_BUCKET: ${self:service}-${sls:stage}-menu-images
+    EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
+    SERVERLESS_SERVICE: ${self:service}
+    SERVERLESS_STAGE: ${sls:stage}
+    AWS_ACCOUNT_ID: 722204368591
 
 # serverless-python-requirements está incluido por defecto
 # Solo necesitamos la configuración custom
@@ -61,9 +65,21 @@ functions:
       - http:
           path: /orders
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
           integration: lambda
-          authorizer: authorize
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   getOrders:
     handler: services/orders/handler.get_orders
@@ -184,6 +200,10 @@ functions:
     handler: services/workflow/step_functions_handlers.complete_delivery
     timeout: 30
 
+  handleOrderFailure:
+    handler: services/workflow/step_functions_handlers.handle_order_failure
+    timeout: 30
+
 resources:
   Resources:
     OrdersTable:
@@ -197,6 +217,10 @@ resources:
             AttributeType: S
           - AttributeName: created_at
             AttributeType: N
+          - AttributeName: customer_id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
         KeySchema:
           - AttributeName: order_id
             KeyType: HASH
@@ -206,6 +230,22 @@ resources:
               - AttributeName: tenant_id
                 KeyType: HASH
               - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: customer-orders-index
+            KeySchema:
+              - AttributeName: customer_id
+                KeyType: HASH
+              - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: tenant-status-index
+            KeySchema:
+              - AttributeName: tenant_id
+                KeyType: HASH
+              - AttributeName: status
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
@@ -294,6 +334,27 @@ resources:
                 - "arn:aws:s3:::${BucketName}/*"
                 - BucketName: !Ref MenuImagesBucket
 
+    # Event Bus personalizado
+    CustomEventBus:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: ${self:service}-${sls:stage}-event-bus
+
+    # EventBridge Rule para capturar eventos de pedidos
+    # Nota: La regla está simplificada sin targets. Los eventos se pueden ver en la consola de EventBridge
+    # Si necesitas capturar eventos en CloudWatch Logs, configura un target de Lambda que escriba los logs
+    OrderEventsRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventBusName: !Ref CustomEventBus
+        EventPattern:
+          source:
+            - orders.service
+          detail-type:
+            - OrderCreated
+            - OrderUpdated
+        State: ENABLED
+
     # Step Functions State Machine para workflow automatizado
     OrderWorkflowStateMachine:
       Type: AWS::StepFunctions::StateMachine
@@ -309,48 +370,134 @@ resources:
                 "Type": "Task",
                 "Resource": "${ConfirmOrderLambdaFunction.Arn}",
                 "ResultPath": "$.confirmResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
                 "Next": "AssignCook"
               },
               "AssignCook": {
                 "Type": "Task",
                 "Resource": "${AssignCookLambdaFunction.Arn}",
                 "ResultPath": "$.cookResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
                 "Next": "WaitForCooking"
               },
               "WaitForCooking": {
                 "Type": "Wait",
                 "Seconds": 300,
-                "Comment": "Espera 5 minutos para cocinar (puede ser ajustado o reemplazado por callback)",
+                "Comment": "Espera simulada de cocción (5 min)",
                 "Next": "CompleteCooking"
               },
               "CompleteCooking": {
                 "Type": "Task",
                 "Resource": "${CompleteCookingLambdaFunction.Arn}",
                 "ResultPath": "$.cookingResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
                 "Next": "WaitForPacking"
               },
               "WaitForPacking": {
                 "Type": "Wait",
                 "Seconds": 120,
-                "Comment": "Espera 2 minutos para empacar",
+                "Comment": "Espera simulada de empaquetado (2 min)",
                 "Next": "AssignDriver"
               },
               "AssignDriver": {
                 "Type": "Task",
                 "Resource": "${AssignDriverLambdaFunction.Arn}",
                 "ResultPath": "$.driverResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
                 "Next": "WaitForDelivery"
               },
               "WaitForDelivery": {
                 "Type": "Wait",
                 "Seconds": 600,
-                "Comment": "Espera 10 minutos para entrega (simulado)",
+                "Comment": "Espera simulada de entrega (10 min)",
                 "Next": "CompleteDelivery"
               },
               "CompleteDelivery": {
                 "Type": "Task",
                 "Resource": "${CompleteDeliveryLambdaFunction.Arn}",
                 "ResultPath": "$.deliveryResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
+                "End": true
+              },
+              "OrderFailed": {
+                "Type": "Task",
+                "Resource": "${HandleOrderFailureLambdaFunction.Arn}",
+                "ResultPath": "$.failureResult",
                 "End": true
               }
             }
@@ -371,6 +518,18 @@ outputs:
     Value: !Ref OrderWorkflowStateMachine
     Export:
       Name: ${self:service}-${sls:stage}-OrderWorkflowArn
+
+  CustomEventBusName:
+    Description: Nombre del Event Bus personalizado
+    Value: !Ref CustomEventBus
+    Export:
+      Name: ${self:service}-${sls:stage}-EventBusName
+
+  CustomEventBusArn:
+    Description: ARN del Event Bus personalizado
+    Value: !GetAtt CustomEventBus.Arn
+    Export:
+      Name: ${self:service}-${sls:stage}-EventBusArn
 
   MenuImagesBucketName:
     Description: Nombre del bucket S3 para imágenes del menú

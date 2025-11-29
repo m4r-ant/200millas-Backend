@@ -9,6 +9,13 @@ class EventBridgeService:
     @staticmethod
     def put_event(source, detail_type, detail, tenant_id):
         try:
+            # ✅ Usar el Event Bus personalizado
+            event_bus_name = os.environ.get(
+                'EVENTBRIDGE_BUS',
+                f"{os.environ.get('SERVERLESS_SERVICE', 'millas-backend')}-" +
+                f"{os.environ.get('SERVERLESS_STAGE', 'dev')}-event-bus"
+            )
+            
             response = events_client.put_events(
                 Entries=[
                     {
@@ -19,7 +26,7 @@ class EventBridgeService:
                             'tenant_id': tenant_id,
                             'timestamp': datetime.utcnow().isoformat()
                         }),
-                        'EventBusName': os.environ.get('EVENTBRIDGE_BUS', 'default')
+                        'EventBusName': event_bus_name
                     }
                 ]
             )
@@ -28,8 +35,9 @@ class EventBridgeService:
                 print(f"Falló publicar evento: {response}")
                 return False
             
-            print(f"Evento publicado: {source}/{detail_type}")
+            print(f"Evento publicado a {event_bus_name}: {source}/{detail_type}")
             return True
         except Exception as e:
             print(f"Error en EventBridge: {str(e)}")
+            # ✅ No fallar si EventBridge no está disponible
             return False
