@@ -31,8 +31,9 @@ def register(event, context):
     if len(password) < 6:
         raise ValidationError("El password debe tener al menos 6 caracteres")
 
-    if user_type not in ['customer', 'staff', 'admin']:
-        raise ValidationError("user_type inválido")
+    # ✅ FIX: Agregar 'driver' y 'chef' a los tipos válidos
+    if user_type not in ['customer', 'staff', 'chef', 'driver', 'admin']:
+        raise ValidationError("user_type inválido. Válidos: customer, staff, chef, driver, admin")
 
     existing = users_db.get_item({'email': email})
     if existing:
@@ -49,9 +50,16 @@ def register(event, context):
 
     users_db.put_item(user)
 
-    logger.info(f"User registered {email}")
+    logger.info(f"User registered {email} as {user_type}")
 
-    return success_response({'message': 'Usuario creado correctamente'}, 201)
+    return success_response({
+        'message': 'Usuario creado correctamente',
+        'user': {
+            'email': email,
+            'name': name,
+            'user_type': user_type
+        }
+    }, 201)
 
 @error_handler
 def login(event, context):

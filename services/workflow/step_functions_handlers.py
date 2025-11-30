@@ -1,9 +1,6 @@
-# FILE: services/workflow/step_functions_handlers.py
-# REEMPLAZA COMPLETAMENTE ESTE ARCHIVO
-
 """
 Lambda handlers para Step Functions - Workflow automatizado
-Cada función maneja un estado específico del workflow
+Incluye estado 'ready' para que drivers puedan ver pedidos listos
 """
 import os
 import json
@@ -18,7 +15,10 @@ workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
 
 
 def confirm_order(event, context):
-    """Confirma el pedido - Estado: confirmed"""
+    """
+    Paso 1: Confirma el pedido
+    Estado: pending → confirmed
+    """
     try:
         logger.info("Confirming order")
         
@@ -88,7 +88,10 @@ def confirm_order(event, context):
 
 
 def assign_cook(event, context):
-    """Asigna cocinero al pedido - Estado: cooking"""
+    """
+    Paso 2: Asigna cocinero al pedido
+    Estado: confirmed → cooking
+    """
     try:
         logger.info("Assigning cook to order")
         
@@ -157,9 +160,13 @@ def assign_cook(event, context):
 
 
 def complete_cooking(event, context):
-    """Completa la cocción - Estado: packing"""
+    """
+    Paso 3: Completa la cocción
+    Estado: cooking → ready
+    ✅ CAMBIO: Ahora pone estado 'ready' en lugar de 'packing'
+    """
     try:
-        logger.info("Completing cooking")
+        logger.info("Completing cooking - marking as ready")
         
         order_id = event.get('order_id')
         if not order_id:
@@ -174,10 +181,10 @@ def complete_cooking(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # ✅ ACTUALIZAR ORDERS TABLE
+        # ✅ ACTUALIZAR ORDERS TABLE - Ahora con estado 'ready'
         orders_db.update_item(
             {'order_id': order_id},
-            {'status': 'packing', 'updated_at': timestamp}
+            {'status': 'ready', 'updated_at': timestamp, 'ready_at': timestamp}
         )
         
         # Actualizar workflow - completar step de cooking
@@ -190,31 +197,36 @@ def complete_cooking(event, context):
             if last_step.get('status') == 'cooking':
                 last_step['completed_at'] = timestamp
         
-        # Agregar nuevo step de packing
+        # ✅ Agregar nuevo step con estado 'ready'
         step = {
-            'status': 'packing',
-            'assigned_to': event.get('packer', 'packer@200millas.com'),
+            'status': 'ready',
+            'assigned_to': 'system',
             'started_at': timestamp,
-            'completed_at': None
+            'completed_at': None,
+            'notes': 'Pedido listo para recoger'
         }
         workflow['steps'].append(step)
-        workflow['current_status'] = 'packing'
+        workflow['current_status'] = 'ready'
         workflow['updated_at'] = timestamp
         workflow_db.put_item(workflow)
         
         # Publicar evento
         EventBridgeService.put_event(
             source='workflow.service',
-            detail_type='OrderPacking',
-            detail={'order_id': order_id, 'status': 'packing'},
+            detail_type='OrderReady',
+            detail={
+                'order_id': order_id, 
+                'status': 'ready',
+                'message': 'Pedido listo para recoger por driver'
+            },
             tenant_id=tenant_id
         )
         
-        logger.info(f"Cooking completed for order {order_id}")
+        logger.info(f"Order {order_id} marked as ready for pickup")
         
         return {
             'order_id': order_id,
-            'status': 'packing',
+            'status': 'ready',
             'timestamp': timestamp,
             'success': True
         }
@@ -225,7 +237,11 @@ def complete_cooking(event, context):
 
 
 def assign_driver(event, context):
-    """Asigna repartidor - Estado: in_delivery"""
+    """
+    Paso 4: Asigna repartidor
+    Estado: ready → in_delivery
+    ✅ CAMBIO: Ahora transiciona desde 'ready' en lugar de 'packing'
+    """
     try:
         logger.info("Assigning driver to order")
         
@@ -246,17 +262,23 @@ def assign_driver(event, context):
         # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
-            {'status': 'in_delivery', 'updated_at': timestamp}
+            {
+                'status': 'in_delivery', 
+                'updated_at': timestamp,
+                'assigned_driver': assigned_to,
+                'pickup_time': timestamp
+            }
         )
         
-        # Actualizar workflow - completar step de packing
+        # Actualizar workflow - completar step de ready
         workflow = workflow_db.get_item({'order_id': order_id})
         if not workflow:
             raise ValueError(f"Workflow for order {order_id} not found")
             
         if workflow.get('steps'):
             last_step = workflow['steps'][-1]
-            if last_step.get('status') == 'packing':
+            # ✅ Completar el step 'ready'
+            if last_step.get('status') == 'ready':
                 last_step['completed_at'] = timestamp
         
         # Agregar nuevo step
@@ -264,7 +286,8 @@ def assign_driver(event, context):
             'status': 'in_delivery',
             'assigned_to': assigned_to,
             'started_at': timestamp,
-            'completed_at': None
+            'completed_at': None,
+            'notes': f'Asignado a {assigned_to}'
         }
         workflow['steps'].append(step)
         workflow['current_status'] = 'in_delivery'
@@ -275,11 +298,16 @@ def assign_driver(event, context):
         EventBridgeService.put_event(
             source='workflow.service',
             detail_type='OrderInDelivery',
-            detail={'order_id': order_id, 'status': 'in_delivery', 'assigned_to': assigned_to},
+            detail={
+                'order_id': order_id, 
+                'status': 'in_delivery', 
+                'assigned_to': assigned_to,
+                'pickup_time': timestamp
+            },
             tenant_id=tenant_id
         )
         
-        logger.info(f"Driver assigned to order {order_id}")
+        logger.info(f"Driver {assigned_to} assigned to order {order_id}")
         
         return {
             'order_id': order_id,
@@ -295,7 +323,10 @@ def assign_driver(event, context):
 
 
 def complete_delivery(event, context):
-    """Completa la entrega - Estado: delivered"""
+    """
+    Paso 5: Completa la entrega
+    Estado: in_delivery → delivered
+    """
     try:
         logger.info("Completing delivery")
         
@@ -315,7 +346,11 @@ def complete_delivery(event, context):
         # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
-            {'status': 'delivered', 'updated_at': timestamp}
+            {
+                'status': 'delivered', 
+                'updated_at': timestamp,
+                'delivered_at': timestamp
+            }
         )
         
         # Actualizar workflow - completar step de delivery
@@ -336,7 +371,11 @@ def complete_delivery(event, context):
         EventBridgeService.put_event(
             source='workflow.service',
             detail_type='OrderDelivered',
-            detail={'order_id': order_id, 'status': 'delivered'},
+            detail={
+                'order_id': order_id, 
+                'status': 'delivered',
+                'delivered_at': timestamp
+            },
             tenant_id=tenant_id
         )
         

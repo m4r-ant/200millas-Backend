@@ -6,7 +6,6 @@ from shared.utils import (
     get_user_email, parse_body, current_timestamp, get_path_param_from_path
 )
 from shared.dynamodb import DynamoDBService
-from shared.eventbridge import EventBridgeService
 from shared.errors import NotFoundError, ValidationError, UnauthorizedError
 from shared.logger import get_logger
 
@@ -14,17 +13,32 @@ logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
 
-VALID_STATUS_TRANSITIONS = {
-    'pending': ['cooking'],
-    'cooking': ['ready', 'packing'],
-    'ready': ['dispatched'],
-    'dispatched': ['delivered'],
-    'delivered': []
-}
+"""
+Driver Handler - Read-Only Mode
+================================
+Compatible con Step Functions - Solo consulta, NO modifica estados
+
+IMPORTANTE: Step Functions maneja TODAS las transiciones de estado automáticamente.
+Los endpoints del driver son solo para:
+  1. Ver pedidos disponibles
+  2. Ver pedidos asignados
+  3. Ver estadísticas personales
+  4. Ver timeline de entregas
+
+NO hay endpoints para cambiar estados manualmente (pickup, complete, etc.)
+porque Step Functions ya los maneja automáticamente.
+"""
+
+# ============================================================================
+# ENDPOINTS READ-ONLY - NO MODIFICAN ESTADO (Compatible con Step Functions)
+# ============================================================================
 
 @error_handler
 def get_available_orders(event, context):
-    """Obtiene pedidos listos para recoger (estado: ready)"""
+    """
+    Obtiene pedidos listos para recoger (estado: ready o packing)
+    Solo consulta, NO modifica estado
+    """
     logger.info("Getting available orders for driver")
     
     tenant_id = get_tenant_id(event)
@@ -32,38 +46,64 @@ def get_available_orders(event, context):
     
     logger.info(f"Driver {user_email} requesting available orders")
     
-    # Query pedidos con status 'ready'
-    orders = orders_db.query_items(
+    # Query pedidos del tenant
+    all_orders = orders_db.query_items(
         'tenant_id',
         tenant_id,
-        index_name='tenant-status-index'
+        index_name='tenant-created-index'
     )
     
-    # Filtrar solo los que están listos
+    # Filtrar solo los que están listos para recoger
+    # Step Functions pone los pedidos en 'packing' o 'ready'
     available_orders = [
-        o for o in orders 
-        if o.get('status') == 'ready'
+        o for o in all_orders 
+        if o.get('status') in ['ready', 'packing']
     ]
     
-    # Serializar Decimals
+    # Enriquecer con información del workflow
+    enriched_orders = []
     for order in available_orders:
-        if 'total' in order:
-            order['total'] = float(order['total'])
-        if 'items' in order:
-            for item in order.get('items', []):
+        order_id = order.get('order_id')
+        workflow = workflow_db.get_item({'order_id': order_id})
+        
+        enriched_order = dict(order)
+        
+        # Agregar info del workflow
+        if workflow:
+            enriched_order['workflow'] = {
+                'current_status': workflow.get('current_status'),
+                'updated_at': workflow.get('updated_at'),
+                'steps_completed': len([s for s in workflow.get('steps', []) if s.get('completed_at')])
+            }
+        
+        # Serializar Decimals
+        if 'total' in enriched_order:
+            enriched_order['total'] = float(enriched_order['total'])
+        if 'items' in enriched_order:
+            for item in enriched_order.get('items', []):
                 if 'price' in item:
                     item['price'] = float(item['price'])
+        
+        enriched_orders.append(enriched_order)
     
-    logger.info(f"Found {len(available_orders)} available orders")
+    # Ordenar por tiempo de creación (más reciente primero)
+    enriched_orders.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+    
+    logger.info(f"Found {len(enriched_orders)} available orders")
     
     return success_response({
-        'orders': available_orders,
-        'count': len(available_orders)
+        'orders': enriched_orders,
+        'count': len(enriched_orders),
+        'message': 'Estos pedidos están siendo procesados automáticamente por el sistema'
     })
+
 
 @error_handler
 def get_assigned_orders(event, context):
-    """Obtiene pedidos asignados al driver actual"""
+    """
+    Obtiene pedidos asignados al driver actual
+    Basado en el workflow, NO modifica nada
+    """
     logger.info("Getting assigned orders for driver")
     
     tenant_id = get_tenant_id(event)
@@ -83,18 +123,31 @@ def get_assigned_orders(event, context):
     
     assigned_orders = []
     
-    # Buscar en workflow quién está asignado
+    # Buscar en workflow cuáles están asignados a este driver
     for order in all_orders:
         order_id = order.get('order_id')
         workflow = workflow_db.get_item({'order_id': order_id})
         
         if workflow:
-            # Buscar el step donde este driver está asignado
+            # Buscar si este driver está asignado en algún step activo
             for step in workflow.get('steps', []):
-                if step.get('assigned_to') == user_email and step.get('status') in ['ready', 'dispatched']:
+                # Step Functions asigna drivers automáticamente
+                assigned_to = step.get('assigned_to', '')
+                step_status = step.get('status', '')
+                
+                # Si el step está en delivery y asignado a este driver
+                if (assigned_to == user_email and 
+                    step_status in ['in_delivery', 'dispatched'] and 
+                    not step.get('completed_at')):
+                    
                     order_with_workflow = dict(order)
-                    order_with_workflow['workflow_status'] = step.get('status')
+                    order_with_workflow['workflow_status'] = step_status
                     order_with_workflow['assigned_at'] = step.get('started_at')
+                    order_with_workflow['step_info'] = {
+                        'status': step_status,
+                        'started_at': step.get('started_at'),
+                        'notes': step.get('notes')
+                    }
                     
                     # Serializar Decimals
                     if 'total' in order_with_workflow:
@@ -105,312 +158,255 @@ def get_assigned_orders(event, context):
                                 item['price'] = float(item['price'])
                     
                     assigned_orders.append(order_with_workflow)
-                    break
+                    break  # Ya encontramos el step activo
     
     logger.info(f"Found {len(assigned_orders)} assigned orders for {user_email}")
     
     return success_response({
         'orders': assigned_orders,
-        'count': len(assigned_orders)
+        'count': len(assigned_orders),
+        'message': 'Step Functions asigna automáticamente estos pedidos'
     })
 
+
 @error_handler
-def update_order_status(event, context):
-    """Actualiza el estado de un pedido con validaciones"""
-    logger.info("Updating order status")
+def get_order_detail(event, context):
+    """
+    Obtiene detalle completo de un pedido incluyendo workflow
+    Solo consulta, NO modifica
+    """
+    logger.info("Getting order detail for driver")
     
     order_id = get_path_param_from_path(event, 'order_id')
-    tenant_id = get_tenant_id(event)
     user_email = get_user_email(event)
-    body = parse_body(event)
     
     if not order_id:
         raise ValidationError("order_id es requerido")
     
-    new_status = body.get('status', '').strip()
-    notes = body.get('notes', '').strip()
+    logger.info(f"Driver {user_email} requesting order {order_id}")
     
-    if not new_status:
-        raise ValidationError("status es requerido")
-    
-    logger.info(f"Attempting to update order {order_id} to status {new_status}")
-    
-    # Obtener pedido actual
+    # Obtener orden
     order = orders_db.get_item({'order_id': order_id})
     if not order:
         raise NotFoundError(f"Pedido {order_id} no encontrado")
     
-    current_status = order.get('status')
-    
-    # Validar transición
-    if current_status not in VALID_STATUS_TRANSITIONS:
-        raise ValidationError(f"Status actual inválido: {current_status}")
-    
-    if new_status not in VALID_STATUS_TRANSITIONS[current_status]:
-        raise ValidationError(f"Transición no permitida: {current_status} → {new_status}")
-    
-    timestamp = current_timestamp()
-    
-    # Actualizar orden
-    orders_db.update_item(
-        {'order_id': order_id},
-        {
-            'status': new_status,
-            'updated_at': timestamp,
-            'updated_by': user_email
-        }
-    )
-    
-    # Actualizar workflow
+    # Obtener workflow
     workflow = workflow_db.get_item({'order_id': order_id})
-    if not workflow:
-        workflow = {'order_id': order_id, 'steps': []}
     
-    # Completar paso anterior
-    if workflow.get('steps'):
-        last_step = workflow['steps'][-1]
-        if last_step.get('status') == current_status and not last_step.get('completed_at'):
-            last_step['completed_at'] = timestamp
+    # Construir respuesta enriquecida
+    order_detail = dict(order)
     
-    # Agregar nuevo step
-    new_step = {
-        'status': new_status,
-        'assigned_to': user_email,
-        'started_at': timestamp,
-        'completed_at': None,
-        'notes': notes
-    }
+    # Serializar Decimals
+    if 'total' in order_detail:
+        order_detail['total'] = float(order_detail['total'])
+    if 'items' in order_detail:
+        for item in order_detail.get('items', []):
+            if 'price' in item:
+                item['price'] = float(item['price'])
     
-    workflow['steps'].append(new_step)
-    workflow['current_status'] = new_status
-    workflow['updated_at'] = timestamp
+    # Agregar información del workflow
+    if workflow:
+        order_detail['workflow'] = {
+            'current_status': workflow.get('current_status'),
+            'updated_at': workflow.get('updated_at'),
+            'steps': workflow.get('steps', [])
+        }
+        
+        # Calcular progreso
+        total_steps = len(workflow.get('steps', []))
+        completed_steps = len([s for s in workflow.get('steps', []) if s.get('completed_at')])
+        order_detail['progress'] = {
+            'total_steps': total_steps,
+            'completed_steps': completed_steps,
+            'percentage': int((completed_steps / total_steps * 100)) if total_steps > 0 else 0
+        }
     
-    workflow_db.put_item(workflow)
+    logger.info(f"Order detail retrieved for {order_id}")
     
-    # Emitir evento
-    EventBridgeService.put_event(
-        source='orders.service',
-        detail_type='OrderStatusUpdated',
-        detail={
-            'order_id': order_id,
-            'old_status': current_status,
-            'new_status': new_status,
-            'updated_by': user_email,
-            'timestamp': timestamp
-        },
-        tenant_id=tenant_id
-    )
-    
-    logger.info(f"Order {order_id} updated: {current_status} → {new_status}")
-    
-    return success_response({
-        'order_id': order_id,
-        'old_status': current_status,
-        'new_status': new_status,
-        'updated_at': timestamp
-    })
+    return success_response(order_detail)
 
-@error_handler
-def pickup_order(event, context):
-    """Marca un pedido como recogido"""
-    logger.info("Marking order as picked up")
-    
-    order_id = get_path_param_from_path(event, 'order_id')
-    tenant_id = get_tenant_id(event)
-    user_email = get_user_email(event)
-    body = parse_body(event)
-    
-    if not order_id:
-        raise ValidationError("order_id es requerido")
-    
-    # Obtener pedido
-    order = orders_db.get_item({'order_id': order_id})
-    if not order:
-        raise NotFoundError(f"Pedido {order_id} no encontrado")
-    
-    if order.get('status') != 'ready':
-        raise ValidationError(f"Solo se pueden recoger pedidos en estado 'ready', actual: {order.get('status')}")
-    
-    timestamp = current_timestamp()
-    location = body.get('location', {})
-    
-    # Actualizar pedido
-    orders_db.update_item(
-        {'order_id': order_id},
-        {
-            'status': 'dispatched',
-            'updated_at': timestamp,
-            'pickup_time': timestamp,
-            'pickup_location': location,
-            'assigned_driver': user_email
-        }
-    )
-    
-    # Actualizar workflow
-    workflow = workflow_db.get_item({'order_id': order_id})
-    if workflow and workflow.get('steps'):
-        last_step = workflow['steps'][-1]
-        if last_step.get('status') == 'ready':
-            last_step['completed_at'] = timestamp
-    
-    dispatch_step = {
-        'status': 'dispatched',
-        'assigned_to': user_email,
-        'started_at': timestamp,
-        'completed_at': None,
-        'location': location
-    }
-    
-    workflow['steps'].append(dispatch_step)
-    workflow['current_status'] = 'dispatched'
-    workflow['updated_at'] = timestamp
-    workflow_db.put_item(workflow)
-    
-    # Emitir evento
-    EventBridgeService.put_event(
-        source='orders.service',
-        detail_type='OrderPickedUp',
-        detail={
-            'order_id': order_id,
-            'driver': user_email,
-            'pickup_time': timestamp,
-            'location': location
-        },
-        tenant_id=tenant_id
-    )
-    
-    logger.info(f"Order {order_id} picked up by {user_email}")
-    
-    return success_response({
-        'order_id': order_id,
-        'status': 'dispatched',
-        'pickup_time': timestamp
-    })
-
-@error_handler
-def complete_delivery(event, context):
-    """Marca un pedido como entregado"""
-    logger.info("Marking order as delivered")
-    
-    order_id = get_path_param_from_path(event, 'order_id')
-    tenant_id = get_tenant_id(event)
-    user_email = get_user_email(event)
-    body = parse_body(event)
-    
-    if not order_id:
-        raise ValidationError("order_id es requerido")
-    
-    # Obtener pedido
-    order = orders_db.get_item({'order_id': order_id})
-    if not order:
-        raise NotFoundError(f"Pedido {order_id} no encontrado")
-    
-    if order.get('status') != 'dispatched':
-        raise ValidationError(f"Solo se pueden entregar pedidos en estado 'dispatched', actual: {order.get('status')}")
-    
-    timestamp = current_timestamp()
-    location = body.get('location', {})
-    notes = body.get('notes', '')
-    
-    # Actualizar pedido
-    orders_db.update_item(
-        {'order_id': order_id},
-        {
-            'status': 'delivered',
-            'updated_at': timestamp,
-            'delivery_time': timestamp,
-            'delivery_location': location,
-            'delivery_notes': notes
-        }
-    )
-    
-    # Actualizar workflow
-    workflow = workflow_db.get_item({'order_id': order_id})
-    if workflow and workflow.get('steps'):
-        last_step = workflow['steps'][-1]
-        if last_step.get('status') == 'dispatched':
-            last_step['completed_at'] = timestamp
-    
-    delivery_step = {
-        'status': 'delivered',
-        'assigned_to': user_email,
-        'started_at': timestamp,
-        'completed_at': timestamp,
-        'location': location,
-        'notes': notes
-    }
-    
-    workflow['steps'].append(delivery_step)
-    workflow['current_status'] = 'delivered'
-    workflow['updated_at'] = timestamp
-    workflow_db.put_item(workflow)
-    
-    # Emitir evento
-    EventBridgeService.put_event(
-        source='orders.service',
-        detail_type='OrderDelivered',
-        detail={
-            'order_id': order_id,
-            'driver': user_email,
-            'delivery_time': timestamp,
-            'location': location
-        },
-        tenant_id=tenant_id
-    )
-    
-    logger.info(f"Order {order_id} delivered by {user_email}")
-    
-    return success_response({
-        'order_id': order_id,
-        'status': 'delivered',
-        'delivery_time': timestamp
-    })
 
 @error_handler
 def get_driver_stats(event, context):
-    """Obtiene estadísticas del driver"""
+    """
+    Obtiene estadísticas del driver
+    Basado en workflow histórico
+    """
     logger.info("Getting driver statistics")
     
     tenant_id = get_tenant_id(event)
     user_email = get_user_email(event)
     
+    if not user_email:
+        raise UnauthorizedError("Email del usuario no encontrado")
+    
     logger.info(f"Getting stats for driver {user_email}")
     
+    # Obtener todos los pedidos del tenant
     all_orders = orders_db.query_items(
         'tenant_id',
         tenant_id,
         index_name='tenant-created-index'
     )
     
+    # Analizar workflows para estadísticas
     delivered = 0
     in_transit = 0
     total_delivery_time = 0
+    deliveries_with_time = 0
     
     for order in all_orders:
         order_id = order.get('order_id')
         workflow = workflow_db.get_item({'order_id': order_id})
         
         if workflow:
-            for step in workflow.get('steps', []):
-                if step.get('assigned_to') == user_email:
-                    if step.get('status') == 'delivered':
+            steps = workflow.get('steps', [])
+            
+            for i, step in enumerate(steps):
+                assigned_to = step.get('assigned_to', '')
+                step_status = step.get('status', '')
+                
+                # Solo contar si está asignado a este driver
+                if assigned_to == user_email:
+                    # Pedidos entregados
+                    if step_status == 'delivered' and step.get('completed_at'):
                         delivered += 1
-                        pickup_time = [s.get('started_at') for s in workflow.get('steps', []) if s.get('status') == 'dispatched']
-                        if pickup_time and step.get('completed_at'):
-                            total_delivery_time += step['completed_at'] - pickup_time[0]
-                    elif step.get('status') == 'dispatched':
+                        
+                        # Calcular tiempo de entrega
+                        # Buscar cuándo empezó el delivery
+                        for prev_step in steps[:i+1]:
+                            if prev_step.get('status') == 'in_delivery':
+                                start_time = prev_step.get('started_at')
+                                end_time = step.get('completed_at')
+                                if start_time and end_time:
+                                    total_delivery_time += (end_time - start_time)
+                                    deliveries_with_time += 1
+                                break
+                    
+                    # Pedidos en tránsito
+                    elif step_status in ['in_delivery', 'dispatched'] and not step.get('completed_at'):
                         in_transit += 1
     
-    avg_time = int(total_delivery_time / delivered) if delivered > 0 else 0
+    # Calcular tiempo promedio
+    avg_time_seconds = int(total_delivery_time / deliveries_with_time) if deliveries_with_time > 0 else 0
+    avg_time_minutes = int(avg_time_seconds / 60)
     
     stats = {
+        'driver_email': user_email,
         'total_deliveries': delivered,
         'in_transit': in_transit,
-        'avg_delivery_time_minutes': int(avg_time / 60),
-        'rating': 4.8,
-        'total_earnings': delivered * 12.5  # $12.50 por entrega
+        'avg_delivery_time_minutes': avg_time_minutes,
+        'avg_delivery_time_seconds': avg_time_seconds,
+        'rating': 4.8,  # Placeholder - implementar sistema de ratings después
+        'total_earnings': delivered * 12.5,  # $12.50 por entrega
+        'message': 'Estadísticas basadas en entregas completadas por Step Functions'
     }
     
     logger.info(f"Stats for {user_email}: {stats}")
     
     return success_response(stats)
+
+
+@error_handler
+def get_delivery_timeline(event, context):
+    """
+    Obtiene el timeline completo de una entrega
+    Muestra todas las transiciones de Step Functions
+    """
+    logger.info("Getting delivery timeline")
+    
+    order_id = get_path_param_from_path(event, 'order_id')
+    user_email = get_user_email(event)
+    
+    if not order_id:
+        raise ValidationError("order_id es requerido")
+    
+    logger.info(f"Driver {user_email} requesting timeline for {order_id}")
+    
+    # Obtener workflow
+    workflow = workflow_db.get_item({'order_id': order_id})
+    
+    if not workflow:
+        return success_response({
+            'order_id': order_id,
+            'timeline': [],
+            'message': 'El pedido aún no tiene workflow registrado'
+        })
+    
+    # Construir timeline legible
+    timeline = []
+    steps = workflow.get('steps', [])
+    
+    for i, step in enumerate(steps):
+        step_info = {
+            'step_number': i + 1,
+            'status': step.get('status'),
+            'status_label': _get_status_label(step.get('status')),
+            'assigned_to': step.get('assigned_to'),
+            'started_at': step.get('started_at'),
+            'completed_at': step.get('completed_at'),
+            'is_completed': step.get('completed_at') is not None,
+            'duration_seconds': None,
+            'duration_readable': None
+        }
+        
+        # Calcular duración si está completado
+        if step.get('completed_at') and step.get('started_at'):
+            duration = step['completed_at'] - step['started_at']
+            step_info['duration_seconds'] = duration
+            step_info['duration_readable'] = _format_duration(duration)
+        
+        timeline.append(step_info)
+    
+    # Calcular duración total
+    total_duration = 0
+    if steps and len(steps) > 0:
+        first_start = steps[0].get('started_at', 0)
+        last_completed = steps[-1].get('completed_at')
+        if last_completed:
+            total_duration = last_completed - first_start
+    
+    logger.info(f"Timeline retrieved for {order_id}")
+    
+    return success_response({
+        'order_id': order_id,
+        'current_status': workflow.get('current_status'),
+        'timeline': timeline,
+        'total_duration_seconds': total_duration,
+        'total_duration_readable': _format_duration(total_duration),
+        'message': 'Timeline generado por Step Functions'
+    })
+
+
+# ============================================================================
+# FUNCIONES AUXILIARES
+# ============================================================================
+
+def _get_status_label(status):
+    """Traduce estados técnicos a labels amigables"""
+    labels = {
+        'pending': 'Pendiente',
+        'confirmed': 'Confirmado',
+        'cooking': 'En cocina',
+        'packing': 'Empaquetando',
+        'ready': 'Listo para recoger',
+        'in_delivery': 'En camino',
+        'dispatched': 'Despachado',
+        'delivered': 'Entregado',
+        'failed': 'Fallido'
+    }
+    return labels.get(status, status)
+
+
+def _format_duration(seconds):
+    """Formatea duración en segundos a formato legible"""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        minutes = seconds // 60
+        secs = seconds % 60
+        return f"{minutes}m {secs}s"
+    else:
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        return f"{hours}h {minutes}m"

@@ -20,14 +20,15 @@ provider:
     SERVERLESS_STAGE: ${sls:stage}
     AWS_ACCOUNT_ID: 722204368591
 
-# serverless-python-requirements está incluido por defecto
-# Solo necesitamos la configuración custom
 custom:
   pythonRequirements:
     dockerizePip: true
     layer: false
 
 functions:
+  # ============================================================================
+  # AUTH ENDPOINTS
+  # ============================================================================
   login:
     handler: services/auth/handler.login
     events:
@@ -63,6 +64,82 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  # ============================================================================
+  # DRIVER ENDPOINTS - READ ONLY (Step Functions maneja las transiciones)
+  # ============================================================================
+  getAvailableOrders:
+    handler: services/driver/handler.get_available_orders
+    events:
+      - http:
+          path: /driver/available
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getAssignedOrders:
+    handler: services/driver/handler.get_assigned_orders
+    events:
+      - http:
+          path: /driver/assigned
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getOrderDetail:
+    handler: services/driver/handler.get_order_detail
+    events:
+      - http:
+          path: /driver/orders/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getDriverStats:
+    handler: services/driver/handler.get_driver_stats
+    events:
+      - http:
+          path: /driver/stats
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getDeliveryTimeline:
+    handler: services/driver/handler.get_delivery_timeline
+    events:
+      - http:
+          path: /driver/timeline/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # ORDER ENDPOINTS - PARA CLIENTES
+  # ============================================================================
   createOrder:
     handler: services/orders/handler.create_order
     events:
@@ -112,89 +189,10 @@ functions:
             resultTtlInSeconds: 300
             identitySource: method.request.header.Authorization
             type: token
-  
-  updateOrderStatus:
-    handler: services/orders/handler.update_order_status
-    events:
-      - http:
-          path: /orders/{order_id}/status
-          method: patch
-          cors:
-            origin: '*'
-            headers:
-              - Content-Type
-              - Authorization
-              - X-Amz-Date
-              - X-Api-Key
-              - X-Amz-Security-Token
-            allowCredentials: false
-          integration: lambda
-          authorizer:
-            name: authorize
-            resultTtlInSeconds: 300
-            identitySource: method.request.header.Authorization
-            type: token
 
-  updateWorkflow:
-    handler: services/workflow/handler.update_workflow
-    events:
-      - http:
-          path: /workflow/{order_id}
-          method: patch
-          cors: true
-          integration: lambda
-          authorizer:
-            name: authorize
-            resultTtlInSeconds: 300
-            identitySource: method.request.header.Authorization
-            type: token
-
-  getWorkflow:
-    handler: services/workflow/handler.get_workflow
-    events:
-      - http:
-          path: /workflow/{order_id}
-          method: get
-          cors: true
-          integration: lambda
-          authorizer:
-            name: authorize
-            resultTtlInSeconds: 300
-            identitySource: method.request.header.Authorization
-            type: token
-
-  getCategories:
-    handler: services/menu/handler.get_categories
-    events:
-      - http:
-          path: /menu/categories
-          method: get
-          cors: true
-          integration: lambda
-
-  getItems:
-    handler: services/menu/handler.get_items
-    events:
-      - http:
-          path: /menu/items
-          method: get
-          cors: true
-          integration: lambda
-
-  uploadMenuImage:
-    handler: services/menu/upload_image.upload_image
-    events:
-      - http:
-          path: /menu/upload-image
-          method: post
-          cors: true
-          integration: lambda
-          authorizer:
-            name: authorize
-            resultTtlInSeconds: 300
-            identitySource: method.request.header.Authorization
-            type: token
-
+  # ============================================================================
+  # DASHBOARD ENDPOINTS - MONITOREO
+  # ============================================================================
   getDashboard:
     handler: services/dashboard/handler.get_dashboard
     events:
@@ -237,7 +235,44 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # Step Functions Handlers
+  # ============================================================================
+  # MENU ENDPOINTS
+  # ============================================================================
+  getCategories:
+    handler: services/menu/handler.get_categories
+    events:
+      - http:
+          path: /menu/categories
+          method: get
+          cors: true
+          integration: lambda
+
+  getItems:
+    handler: services/menu/handler.get_items
+    events:
+      - http:
+          path: /menu/items
+          method: get
+          cors: true
+          integration: lambda
+
+  uploadMenuImage:
+    handler: services/menu/upload_image.upload_image
+    events:
+      - http:
+          path: /menu/upload-image
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # STEP FUNCTIONS HANDLERS - WORKFLOW AUTOMÁTICO
+  # ============================================================================
   confirmOrder:
     handler: services/workflow/step_functions_handlers.confirm_order
     timeout: 30
@@ -261,21 +296,6 @@ functions:
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
     timeout: 30
-
-  # WebSocket API para seguimiento en tiempo real
-  # Nota: WebSocket requiere configuración manual adicional o plugin serverless-websocket-plugin
-  # Por ahora, las funciones están listas pero el API Gateway WebSocket debe configurarse manualmente
-  websocketConnect:
-    handler: services/websocket/handler.connect
-    timeout: 10
-
-  websocketDisconnect:
-    handler: services/websocket/handler.disconnect
-    timeout: 10
-
-  websocketDefault:
-    handler: services/websocket/handler.default
-    timeout: 10
 
 resources:
   Resources:
@@ -369,7 +389,6 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
-    # S3 Bucket para imágenes del menú
     MenuImagesBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -407,13 +426,11 @@ resources:
                 - "arn:aws:s3:::${BucketName}/*"
                 - BucketName: !Ref MenuImagesBucket
 
-    # Event Bus personalizado
     CustomEventBus:
       Type: AWS::Events::EventBus
       Properties:
         Name: ${self:service}-${sls:stage}-event-bus
 
-    # EventBridge Rule para capturar eventos de pedidos y workflow
     OrderEventsRule:
       Type: AWS::Events::Rule
       Properties:
@@ -434,7 +451,9 @@ resources:
         State: ENABLED
         Description: Captura todos los eventos relacionados con pedidos y workflow
 
-    # Step Functions State Machine para workflow automatizado
+    # ============================================================================
+    # STEP FUNCTIONS STATE MACHINE - WORKFLOW AUTOMATIZADO
+    # ============================================================================
     OrderWorkflowStateMachine:
       Type: AWS::StepFunctions::StateMachine
       Properties:
@@ -515,12 +534,6 @@ resources:
                     "Next": "OrderFailed"
                   }
                 ],
-                "Next": "WaitForPacking"
-              },
-              "WaitForPacking": {
-                "Type": "Wait",
-                "Seconds": 120,
-                "Comment": "Espera simulada de empaquetado (2 min)",
                 "Next": "AssignDriver"
               },
               "AssignDriver": {
@@ -582,17 +595,7 @@ resources:
             }
           }
 
-    # Nota: Usamos el rol IAM existente (LabRole) en lugar de crear uno nuevo
-    # El rol LabRole debe tener los siguientes permisos:
-    # - lambda:InvokeFunction (para las funciones del Step Function)
-    # - dynamodb:GetItem, PutItem, UpdateItem, Query (para DynamoDB)
-    # - events:PutEvents (para EventBridge)
-    # - s3:GetObject, PutObject (para S3)
-    # Y debe permitir que Step Functions lo asuma (Trust Relationship con states.amazonaws.com)
-
-  # Outputs - Recursos creados para verificación
 outputs:
-  # API Gateway
   ApiGatewayRestApiId:
     Description: API Gateway REST API ID
     Value:
@@ -606,73 +609,14 @@ outputs:
     Export:
       Name: ${self:service}-${sls:stage}-ApiGatewayUrl
 
-  # Step Functions
   OrderWorkflowStateMachineArn:
     Description: ARN de la Step Function para workflow de pedidos
     Value: !Ref OrderWorkflowStateMachine
     Export:
       Name: ${self:service}-${sls:stage}-OrderWorkflowArn
 
-  OrderWorkflowStateMachineName:
-    Description: Nombre de la Step Function
-    Value: !GetAtt OrderWorkflowStateMachine.Name
-    Export:
-      Name: ${self:service}-${sls:stage}-OrderWorkflowName
-
-  # EventBridge
   CustomEventBusName:
     Description: Nombre del Event Bus personalizado
     Value: !Ref CustomEventBus
     Export:
       Name: ${self:service}-${sls:stage}-EventBusName
-
-  CustomEventBusArn:
-    Description: ARN del Event Bus personalizado
-    Value: !GetAtt CustomEventBus.Arn
-    Export:
-      Name: ${self:service}-${sls:stage}-EventBusArn
-
-  # DynamoDB Tables
-  OrdersTableName:
-    Description: Nombre de la tabla de pedidos
-    Value: !Ref OrdersTable
-    Export:
-      Name: ${self:service}-${sls:stage}-OrdersTable
-
-  WorkflowTableName:
-    Description: Nombre de la tabla de workflow
-    Value: !Ref WorkflowTable
-    Export:
-      Name: ${self:service}-${sls:stage}-WorkflowTable
-
-  MenuTableName:
-    Description: Nombre de la tabla de menú
-    Value: !Ref MenuTable
-    Export:
-      Name: ${self:service}-${sls:stage}-MenuTable
-
-  UsersTableName:
-    Description: Nombre de la tabla de usuarios
-    Value: !Ref UsersTable
-    Export:
-      Name: ${self:service}-${sls:stage}-UsersTable
-
-  # S3
-  MenuImagesBucketName:
-    Description: Nombre del bucket S3 para imágenes del menú
-    Value: !Ref MenuImagesBucket
-    Export:
-      Name: ${self:service}-${sls:stage}-MenuImagesBucket
-
-  # Lambda Functions (ejemplos principales)
-  CreateOrderFunctionName:
-    Description: Nombre de la función Lambda createOrder
-    Value: !GetAtt CreateOrderLambdaFunction.FunctionName
-    Export:
-      Name: ${self:service}-${sls:stage}-CreateOrderFunction
-
-  LoginFunctionName:
-    Description: Nombre de la función Lambda login
-    Value: !GetAtt LoginLambdaFunction.FunctionName
-    Export:
-      Name: ${self:service}-${sls:stage}-LoginFunction
