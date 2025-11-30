@@ -5,7 +5,8 @@ import boto3
 from decimal import Decimal
 from shared.utils import (
     response, success_response, error_response, error_handler, 
-    parse_body, get_tenant_id, get_user_id, get_user_email, current_timestamp
+    parse_body, get_tenant_id, get_user_id, get_user_email, current_timestamp,
+    get_path_param_from_path
 )
 from shared.dynamodb import DynamoDBService
 from shared.eventbridge import EventBridgeService
@@ -173,11 +174,16 @@ def _normalize_items(items):
 
 
 def _serialize_items(items):
+    """Convierte todos los Decimals a float para JSON serialization"""
     serialized = []
     for item in items:
-        serialized_item = dict(item)
-        if 'price' in serialized_item:
-            serialized_item['price'] = float(serialized_item['price'])
+        serialized_item = {}
+        for key, value in item.items():
+            # Convertir Decimal a float
+            if isinstance(value, Decimal):
+                serialized_item[key] = float(value)
+            else:
+                serialized_item[key] = value
         serialized.append(serialized_item)
     return serialized
 
@@ -213,26 +219,38 @@ def get_orders(event, context):
         index_name='customer-orders-index'
     )
     
-    # Serializar Decimals
+    # ✅ Serializar Decimals correctamente
+    serialized_items = []
     for order in items:
-        if 'total' in order:
-            order['total'] = float(order['total'])
-        if 'items' in order:
-            order['items'] = _serialize_items(order['items'])
+        serialized_order = dict(order)
+        
+        # Convertir total a float
+        if 'total' in serialized_order:
+            serialized_order['total'] = float(serialized_order['total'])
+        
+        # Serializar items dentro de la orden
+        if 'items' in serialized_order:
+            serialized_order['items'] = _serialize_items(serialized_order['items'])
+        
+        serialized_items.append(serialized_order)
     
-    logger.info(f"Found {len(items)} orders for customer_id: {customer_id}")
+    logger.info(f"Found {len(serialized_items)} orders for customer_id: {customer_id}")
     
-    return success_response(items)
+    return success_response(serialized_items)
 
 @error_handler
 def get_order(event, context):
     logger.info("Getting order details")
     
-    order_id = event.get('pathParameters', {}).get('order_id')
-    customer_id = get_user_id(event)
+    # ✅ Usar la función mejorada para extraer order_id del path
+    order_id = get_path_param_from_path(event, 'order_id')
+    
+    logger.info(f"Extracted order_id: {order_id}")
     
     if not order_id:
         raise ValidationError("order_id es requerido")
+    
+    customer_id = get_user_id(event)
     
     order = orders_db.get_item({'order_id': order_id})
     
@@ -242,9 +260,15 @@ def get_order(event, context):
     if order.get('customer_id') != customer_id:
         raise ValidationError("No tienes permiso para ver este pedido")
     
-    if 'total' in order:
-        order['total'] = float(order['total'])
+    # ✅ Serializar correctamente el pedido completo
+    serialized_order = dict(order)
+    
+    if 'total' in serialized_order:
+        serialized_order['total'] = float(serialized_order['total'])
+    
+    if 'items' in serialized_order:
+        serialized_order['items'] = _serialize_items(serialized_order['items'])
     
     logger.info(f"Order details retrieved: {order_id}")
     
-    return success_response(order)
+    return success_response(serialized_order)

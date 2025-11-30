@@ -180,7 +180,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.login",
               "Runtime": "python3.12",
@@ -212,7 +212,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.register",
               "Runtime": "python3.12",
@@ -244,7 +244,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.authorize",
               "Runtime": "python3.12",
@@ -276,7 +276,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.logout",
               "Runtime": "python3.12",
@@ -308,7 +308,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.create_order",
               "Runtime": "python3.12",
@@ -340,7 +340,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.get_orders",
               "Runtime": "python3.12",
@@ -372,7 +372,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.get_order",
               "Runtime": "python3.12",
@@ -404,7 +404,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/handler.update_workflow",
               "Runtime": "python3.12",
@@ -436,7 +436,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/handler.get_workflow",
               "Runtime": "python3.12",
@@ -468,7 +468,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/menu/handler.get_categories",
               "Runtime": "python3.12",
@@ -500,7 +500,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/menu/handler.get_items",
               "Runtime": "python3.12",
@@ -532,7 +532,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/menu/upload_image.upload_image",
               "Runtime": "python3.12",
@@ -564,7 +564,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_dashboard",
               "Runtime": "python3.12",
@@ -596,7 +596,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_order_timeline",
               "Runtime": "python3.12",
@@ -628,7 +628,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_staff_performance",
               "Runtime": "python3.12",
@@ -660,7 +660,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.confirm_order",
               "Runtime": "python3.12",
@@ -692,7 +692,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.assign_cook",
               "Runtime": "python3.12",
@@ -724,7 +724,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.complete_cooking",
               "Runtime": "python3.12",
@@ -756,7 +756,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.assign_driver",
               "Runtime": "python3.12",
@@ -788,7 +788,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.complete_delivery",
               "Runtime": "python3.12",
@@ -820,7 +820,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.handle_order_failure",
               "Runtime": "python3.12",
@@ -852,7 +852,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/websocket/handler.connect",
               "Runtime": "python3.12",
@@ -884,7 +884,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/websocket/handler.disconnect",
               "Runtime": "python3.12",
@@ -916,7 +916,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z/millas-backend.zip"
               },
               "Handler": "services/websocket/handler.default",
               "Runtime": "python3.12",
@@ -943,244 +943,244 @@
               "WebsocketDefaultLogGroup"
             ]
           },
-          "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q": {
+          "LoginLambdaVersionRbia8Jn7PidU8GCIhIdzLtCHX73OcjKwM0c56H5xY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "LoginLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM": {
+          "RegisterLambdaVersionrLVlHkcrK3vJmVqOkSuQeXWndidzpncdYd4o4dgHcY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "RegisterLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo": {
+          "AuthorizeLambdaVersionG7roHV2Fxhj5iEB9jjyrQlgIa7fu6ZsMzHZeQnF8Is": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AuthorizeLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk": {
+          "LogoutLambdaVersion4Rkkwfzk6lmzY4v0H6NExzcBbb5kOs1mB18vEU7p96c": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "LogoutLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0": {
+          "CreateOrderLambdaVersionUqg6F5ybh5S26ox5GHHZ0Jf8quYEPkXDKr2Y7mL1Q": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CreateOrderLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo": {
+          "GetOrdersLambdaVersion55XXj6M4fdAw2mRSeYtoCOYW81kE5drm1eYmHZMIliY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrdersLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg": {
+          "GetOrderLambdaVersion6TlZ688PiTV5Kr8stlSkuqntMNKpcWvGxT6BpQfOrtc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrderLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A": {
+          "UpdateWorkflowLambdaVersion3qpZbmGfSgfMovlla2LNnmYv7gXIRG9S7yNNK0IiWas": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "UpdateWorkflowLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0": {
+          "GetWorkflowLambdaVersionNsxmrupGWFAgAMaa1C6TQaSrFz2uMTBlm6QUj9OS0": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetWorkflowLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk": {
+          "GetCategoriesLambdaVersionAdqA6qycDbldndXx9hXt6e1oLo53qdkRkD5q2em6F8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetCategoriesLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4": {
+          "GetItemsLambdaVersionnxwEct7Lk5Saknlfn61juISu9NsPLZY1NXvUgUYo": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetItemsLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc": {
+          "UploadMenuImageLambdaVersionYa4odJNBOdWG2IOyxjnNcJQtuezyS2dC6TaJ3WbDCI": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "UploadMenuImageLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps": {
+          "GetDashboardLambdaVersionxHXRh8qXcCeBXjvAtDJE5FBtWDq6Twv3mKDDavYYY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetDashboardLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g": {
+          "GetOrderTimelineLambdaVersionSuyvprXO3wMblV7RNO5cA75tTEJ7T8Yf4tUT5nKhMg": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrderTimelineLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU": {
+          "GetStaffPerformanceLambdaVersionjn4YIcofAX48j9fg6UsH5YDkD1oPAy0pshQGnI0o": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetStaffPerformanceLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ": {
+          "ConfirmOrderLambdaVersionI0ThkkAW3ERgCDNlOq071BFsiXGLArQ6yikCc5yBQ": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ConfirmOrderLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w": {
+          "AssignCookLambdaVersionejNW0AHKz8PfLDRhqVw3o61NkICCdIJIcQSes3W14": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AssignCookLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI": {
+          "CompleteCookingLambdaVersiong2fCnY7FiyVAZLcOssjIKECQlWkH3DzlZaz4zu1BE": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CompleteCookingLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0": {
+          "AssignDriverLambdaVersionma2cUSx73uHbK7fAQoRtwAmRsiv2BjX9H8mf2w": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AssignDriverLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY": {
+          "CompleteDeliveryLambdaVersionU54mrHAMqw6QMGMSqTDKARxWdYiObZHKrlIg2nk1WA": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CompleteDeliveryLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k": {
+          "HandleOrderFailureLambdaVersionmZx5aTxXNcLMl4Rm4eHl6DldHPgRvE6tZtRTFTZ8L68": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "HandleOrderFailureLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU": {
+          "WebsocketConnectLambdaVersionZal98c8Go7m4DCiMqcbUODF22ewmzf08FCztBXfEM": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "WebsocketConnectLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns": {
+          "WebsocketDisconnectLambdaVersionmUUEOG62I7bBzhKdf3cBFhkhdgJd1pYqGeW7NmRAG8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "WebsocketDisconnectLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
-          "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w": {
+          "WebsocketDefaultLambdaVersioniCaScPxO747myZr24K3CeHq2kqGmbsbuAiWexrfM": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "WebsocketDefaultLambdaFunction"
               },
-              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+              "CodeSha256": "40RqKnZIMSyM8c6TZ+iGah41mvEeny+uwicxDA+aTyQ="
             }
           },
           "ApiGatewayRestApi": {
@@ -4653,7 +4653,7 @@
               "Type": "TOKEN"
             }
           },
-          "ApiGatewayDeployment1764512572899": {
+          "ApiGatewayDeployment1764515989886": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -5519,7 +5519,7 @@
           "LoginLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q"
+              "Ref": "LoginLambdaVersionRbia8Jn7PidU8GCIhIdzLtCHX73OcjKwM0c56H5xY"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-LoginLambdaFunctionQualifiedArn"
@@ -5528,7 +5528,7 @@
           "RegisterLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM"
+              "Ref": "RegisterLambdaVersionrLVlHkcrK3vJmVqOkSuQeXWndidzpncdYd4o4dgHcY"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-RegisterLambdaFunctionQualifiedArn"
@@ -5537,7 +5537,7 @@
           "AuthorizeLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo"
+              "Ref": "AuthorizeLambdaVersionG7roHV2Fxhj5iEB9jjyrQlgIa7fu6ZsMzHZeQnF8Is"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AuthorizeLambdaFunctionQualifiedArn"
@@ -5546,7 +5546,7 @@
           "LogoutLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk"
+              "Ref": "LogoutLambdaVersion4Rkkwfzk6lmzY4v0H6NExzcBbb5kOs1mB18vEU7p96c"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-LogoutLambdaFunctionQualifiedArn"
@@ -5555,7 +5555,7 @@
           "CreateOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0"
+              "Ref": "CreateOrderLambdaVersionUqg6F5ybh5S26ox5GHHZ0Jf8quYEPkXDKr2Y7mL1Q"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CreateOrderLambdaFunctionQualifiedArn"
@@ -5564,7 +5564,7 @@
           "GetOrdersLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo"
+              "Ref": "GetOrdersLambdaVersion55XXj6M4fdAw2mRSeYtoCOYW81kE5drm1eYmHZMIliY"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrdersLambdaFunctionQualifiedArn"
@@ -5573,7 +5573,7 @@
           "GetOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg"
+              "Ref": "GetOrderLambdaVersion6TlZ688PiTV5Kr8stlSkuqntMNKpcWvGxT6BpQfOrtc"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrderLambdaFunctionQualifiedArn"
@@ -5582,7 +5582,7 @@
           "UpdateWorkflowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A"
+              "Ref": "UpdateWorkflowLambdaVersion3qpZbmGfSgfMovlla2LNnmYv7gXIRG9S7yNNK0IiWas"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-UpdateWorkflowLambdaFunctionQualifiedArn"
@@ -5591,7 +5591,7 @@
           "GetWorkflowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0"
+              "Ref": "GetWorkflowLambdaVersionNsxmrupGWFAgAMaa1C6TQaSrFz2uMTBlm6QUj9OS0"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetWorkflowLambdaFunctionQualifiedArn"
@@ -5600,7 +5600,7 @@
           "GetCategoriesLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk"
+              "Ref": "GetCategoriesLambdaVersionAdqA6qycDbldndXx9hXt6e1oLo53qdkRkD5q2em6F8"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetCategoriesLambdaFunctionQualifiedArn"
@@ -5609,7 +5609,7 @@
           "GetItemsLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4"
+              "Ref": "GetItemsLambdaVersionnxwEct7Lk5Saknlfn61juISu9NsPLZY1NXvUgUYo"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetItemsLambdaFunctionQualifiedArn"
@@ -5618,7 +5618,7 @@
           "UploadMenuImageLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc"
+              "Ref": "UploadMenuImageLambdaVersionYa4odJNBOdWG2IOyxjnNcJQtuezyS2dC6TaJ3WbDCI"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-UploadMenuImageLambdaFunctionQualifiedArn"
@@ -5627,7 +5627,7 @@
           "GetDashboardLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps"
+              "Ref": "GetDashboardLambdaVersionxHXRh8qXcCeBXjvAtDJE5FBtWDq6Twv3mKDDavYYY"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetDashboardLambdaFunctionQualifiedArn"
@@ -5636,7 +5636,7 @@
           "GetOrderTimelineLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g"
+              "Ref": "GetOrderTimelineLambdaVersionSuyvprXO3wMblV7RNO5cA75tTEJ7T8Yf4tUT5nKhMg"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrderTimelineLambdaFunctionQualifiedArn"
@@ -5645,7 +5645,7 @@
           "GetStaffPerformanceLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU"
+              "Ref": "GetStaffPerformanceLambdaVersionjn4YIcofAX48j9fg6UsH5YDkD1oPAy0pshQGnI0o"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetStaffPerformanceLambdaFunctionQualifiedArn"
@@ -5654,7 +5654,7 @@
           "ConfirmOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ"
+              "Ref": "ConfirmOrderLambdaVersionI0ThkkAW3ERgCDNlOq071BFsiXGLArQ6yikCc5yBQ"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-ConfirmOrderLambdaFunctionQualifiedArn"
@@ -5663,7 +5663,7 @@
           "AssignCookLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w"
+              "Ref": "AssignCookLambdaVersionejNW0AHKz8PfLDRhqVw3o61NkICCdIJIcQSes3W14"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AssignCookLambdaFunctionQualifiedArn"
@@ -5672,7 +5672,7 @@
           "CompleteCookingLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI"
+              "Ref": "CompleteCookingLambdaVersiong2fCnY7FiyVAZLcOssjIKECQlWkH3DzlZaz4zu1BE"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CompleteCookingLambdaFunctionQualifiedArn"
@@ -5681,7 +5681,7 @@
           "AssignDriverLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0"
+              "Ref": "AssignDriverLambdaVersionma2cUSx73uHbK7fAQoRtwAmRsiv2BjX9H8mf2w"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AssignDriverLambdaFunctionQualifiedArn"
@@ -5690,7 +5690,7 @@
           "CompleteDeliveryLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY"
+              "Ref": "CompleteDeliveryLambdaVersionU54mrHAMqw6QMGMSqTDKARxWdYiObZHKrlIg2nk1WA"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CompleteDeliveryLambdaFunctionQualifiedArn"
@@ -5699,7 +5699,7 @@
           "HandleOrderFailureLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k"
+              "Ref": "HandleOrderFailureLambdaVersionmZx5aTxXNcLMl4Rm4eHl6DldHPgRvE6tZtRTFTZ8L68"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-HandleOrderFailureLambdaFunctionQualifiedArn"
@@ -5708,7 +5708,7 @@
           "WebsocketConnectLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU"
+              "Ref": "WebsocketConnectLambdaVersionZal98c8Go7m4DCiMqcbUODF22ewmzf08FCztBXfEM"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-WebsocketConnectLambdaFunctionQualifiedArn"
@@ -5717,7 +5717,7 @@
           "WebsocketDisconnectLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns"
+              "Ref": "WebsocketDisconnectLambdaVersionmUUEOG62I7bBzhKdf3cBFhkhdgJd1pYqGeW7NmRAG8"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-WebsocketDisconnectLambdaFunctionQualifiedArn"
@@ -5726,7 +5726,7 @@
           "WebsocketDefaultLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w"
+              "Ref": "WebsocketDefaultLambdaVersioniCaScPxO747myZr24K3CeHq2kqGmbsbuAiWexrfM"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-WebsocketDefaultLambdaFunctionQualifiedArn"
@@ -5839,7 +5839,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q"
+        "versionLogicalId": "LoginLambdaVersionRbia8Jn7PidU8GCIhIdzLtCHX73OcjKwM0c56H5xY"
       },
       "register": {
         "handler": "services/auth/handler.register",
@@ -5884,7 +5884,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM"
+        "versionLogicalId": "RegisterLambdaVersionrLVlHkcrK3vJmVqOkSuQeXWndidzpncdYd4o4dgHcY"
       },
       "authorize": {
         "handler": "services/auth/handler.authorize",
@@ -5896,7 +5896,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo"
+        "versionLogicalId": "AuthorizeLambdaVersionG7roHV2Fxhj5iEB9jjyrQlgIa7fu6ZsMzHZeQnF8Is"
       },
       "logout": {
         "handler": "services/auth/handler.logout",
@@ -5952,7 +5952,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk"
+        "versionLogicalId": "LogoutLambdaVersion4Rkkwfzk6lmzY4v0H6NExzcBbb5kOs1mB18vEU7p96c"
       },
       "createOrder": {
         "handler": "services/orders/handler.create_order",
@@ -6006,7 +6006,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0"
+        "versionLogicalId": "CreateOrderLambdaVersionUqg6F5ybh5S26ox5GHHZ0Jf8quYEPkXDKr2Y7mL1Q"
       },
       "getOrders": {
         "handler": "services/orders/handler.get_orders",
@@ -6062,7 +6062,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo"
+        "versionLogicalId": "GetOrdersLambdaVersion55XXj6M4fdAw2mRSeYtoCOYW81kE5drm1eYmHZMIliY"
       },
       "getOrder": {
         "handler": "services/orders/handler.get_order",
@@ -6118,7 +6118,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg"
+        "versionLogicalId": "GetOrderLambdaVersion6TlZ688PiTV5Kr8stlSkuqntMNKpcWvGxT6BpQfOrtc"
       },
       "updateWorkflow": {
         "handler": "services/workflow/handler.update_workflow",
@@ -6174,7 +6174,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A"
+        "versionLogicalId": "UpdateWorkflowLambdaVersion3qpZbmGfSgfMovlla2LNnmYv7gXIRG9S7yNNK0IiWas"
       },
       "getWorkflow": {
         "handler": "services/workflow/handler.get_workflow",
@@ -6230,7 +6230,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0"
+        "versionLogicalId": "GetWorkflowLambdaVersionNsxmrupGWFAgAMaa1C6TQaSrFz2uMTBlm6QUj9OS0"
       },
       "getCategories": {
         "handler": "services/menu/handler.get_categories",
@@ -6275,7 +6275,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk"
+        "versionLogicalId": "GetCategoriesLambdaVersionAdqA6qycDbldndXx9hXt6e1oLo53qdkRkD5q2em6F8"
       },
       "getItems": {
         "handler": "services/menu/handler.get_items",
@@ -6320,7 +6320,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4"
+        "versionLogicalId": "GetItemsLambdaVersionnxwEct7Lk5Saknlfn61juISu9NsPLZY1NXvUgUYo"
       },
       "uploadMenuImage": {
         "handler": "services/menu/upload_image.upload_image",
@@ -6376,7 +6376,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc"
+        "versionLogicalId": "UploadMenuImageLambdaVersionYa4odJNBOdWG2IOyxjnNcJQtuezyS2dC6TaJ3WbDCI"
       },
       "getDashboard": {
         "handler": "services/dashboard/handler.get_dashboard",
@@ -6432,7 +6432,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps"
+        "versionLogicalId": "GetDashboardLambdaVersionxHXRh8qXcCeBXjvAtDJE5FBtWDq6Twv3mKDDavYYY"
       },
       "getOrderTimeline": {
         "handler": "services/dashboard/handler.get_order_timeline",
@@ -6488,7 +6488,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g"
+        "versionLogicalId": "GetOrderTimelineLambdaVersionSuyvprXO3wMblV7RNO5cA75tTEJ7T8Yf4tUT5nKhMg"
       },
       "getStaffPerformance": {
         "handler": "services/dashboard/handler.get_staff_performance",
@@ -6544,7 +6544,7 @@
         "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU"
+        "versionLogicalId": "GetStaffPerformanceLambdaVersionjn4YIcofAX48j9fg6UsH5YDkD1oPAy0pshQGnI0o"
       },
       "confirmOrder": {
         "handler": "services/workflow/step_functions_handlers.confirm_order",
@@ -6556,7 +6556,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ"
+        "versionLogicalId": "ConfirmOrderLambdaVersionI0ThkkAW3ERgCDNlOq071BFsiXGLArQ6yikCc5yBQ"
       },
       "assignCook": {
         "handler": "services/workflow/step_functions_handlers.assign_cook",
@@ -6568,7 +6568,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w"
+        "versionLogicalId": "AssignCookLambdaVersionejNW0AHKz8PfLDRhqVw3o61NkICCdIJIcQSes3W14"
       },
       "completeCooking": {
         "handler": "services/workflow/step_functions_handlers.complete_cooking",
@@ -6580,7 +6580,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI"
+        "versionLogicalId": "CompleteCookingLambdaVersiong2fCnY7FiyVAZLcOssjIKECQlWkH3DzlZaz4zu1BE"
       },
       "assignDriver": {
         "handler": "services/workflow/step_functions_handlers.assign_driver",
@@ -6592,7 +6592,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0"
+        "versionLogicalId": "AssignDriverLambdaVersionma2cUSx73uHbK7fAQoRtwAmRsiv2BjX9H8mf2w"
       },
       "completeDelivery": {
         "handler": "services/workflow/step_functions_handlers.complete_delivery",
@@ -6604,7 +6604,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY"
+        "versionLogicalId": "CompleteDeliveryLambdaVersionU54mrHAMqw6QMGMSqTDKARxWdYiObZHKrlIg2nk1WA"
       },
       "handleOrderFailure": {
         "handler": "services/workflow/step_functions_handlers.handle_order_failure",
@@ -6616,7 +6616,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k"
+        "versionLogicalId": "HandleOrderFailureLambdaVersionmZx5aTxXNcLMl4Rm4eHl6DldHPgRvE6tZtRTFTZ8L68"
       },
       "websocketConnect": {
         "handler": "services/websocket/handler.connect",
@@ -6628,7 +6628,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU"
+        "versionLogicalId": "WebsocketConnectLambdaVersionZal98c8Go7m4DCiMqcbUODF22ewmzf08FCztBXfEM"
       },
       "websocketDisconnect": {
         "handler": "services/websocket/handler.disconnect",
@@ -6640,7 +6640,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns"
+        "versionLogicalId": "WebsocketDisconnectLambdaVersionmUUEOG62I7bBzhKdf3cBFhkhdgJd1pYqGeW7NmRAG8"
       },
       "websocketDefault": {
         "handler": "services/websocket/handler.default",
@@ -6652,7 +6652,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w"
+        "versionLogicalId": "WebsocketDefaultLambdaVersioniCaScPxO747myZr24K3CeHq2kqGmbsbuAiWexrfM"
       }
     },
     "resources": {
@@ -7082,7 +7082,7 @@
     "artifact": "/home/ubuntu/200millas-Backend/.serverless/millas-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z",
+    "artifactDirectoryName": "serverless/millas-backend/dev/1764516010702-2025-11-30T15:20:10.702Z",
     "artifact": "millas-backend.zip"
   }
 }
