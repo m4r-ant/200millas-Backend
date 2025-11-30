@@ -8,7 +8,7 @@
       "name": "aws",
       "runtime": "python3.12",
       "memorySize": 1024,
-      "timeout": 30,
+      "timeout": 29,
       "iam": {
         "role": "arn:aws:iam::722204368591:role/LabRole"
       },
@@ -18,7 +18,11 @@
         "MENU_TABLE": "dev-Menu",
         "USERS_TABLE": "dev-Users",
         "TENANT_ID": "200millas",
-        "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+        "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+        "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+        "SERVERLESS_SERVICE": "millas-backend",
+        "SERVERLESS_STAGE": "dev",
+        "AWS_ACCOUNT_ID": "722204368591"
       },
       "stage": "dev",
       "region": "us-east-1",
@@ -147,18 +151,42 @@
               "LogGroupName": "/aws/lambda/millas-backend-dev-completeDelivery"
             }
           },
+          "HandleOrderFailureLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/millas-backend-dev-handleOrderFailure"
+            }
+          },
+          "WebsocketConnectLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/millas-backend-dev-websocketConnect"
+            }
+          },
+          "WebsocketDisconnectLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/millas-backend-dev-websocketDisconnect"
+            }
+          },
+          "WebsocketDefaultLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/millas-backend-dev-websocketDefault"
+            }
+          },
           "LoginLambdaFunction": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.login",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-login",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -166,7 +194,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -180,13 +212,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.register",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-register",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -194,7 +226,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -208,13 +244,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.authorize",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-authorize",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -222,7 +258,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -236,13 +276,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/auth/handler.logout",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-logout",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -250,7 +290,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -264,13 +308,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.create_order",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-createOrder",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -278,7 +322,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -292,13 +340,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.get_orders",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getOrders",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -306,7 +354,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -320,13 +372,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/orders/handler.get_order",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getOrder",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -334,7 +386,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -348,13 +404,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/handler.update_workflow",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-updateWorkflow",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -362,7 +418,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -376,13 +436,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/handler.get_workflow",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getWorkflow",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -390,7 +450,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -404,13 +468,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/menu/handler.get_categories",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getCategories",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -418,7 +482,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -432,13 +500,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/menu/handler.get_items",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getItems",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -446,7 +514,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -460,13 +532,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/menu/upload_image.upload_image",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-uploadMenuImage",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -474,7 +546,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -488,13 +564,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_dashboard",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getDashboard",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -502,7 +578,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -516,13 +596,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_order_timeline",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getOrderTimeline",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -530,7 +610,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -544,13 +628,13 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/dashboard/handler.get_staff_performance",
               "Runtime": "python3.12",
               "FunctionName": "millas-backend-dev-getStaffPerformance",
               "MemorySize": 1024,
-              "Timeout": 30,
+              "Timeout": 29,
               "Environment": {
                 "Variables": {
                   "ORDERS_TABLE": "dev-Orders",
@@ -558,7 +642,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -572,7 +660,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.confirm_order",
               "Runtime": "python3.12",
@@ -586,7 +674,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -600,7 +692,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.assign_cook",
               "Runtime": "python3.12",
@@ -614,7 +706,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -628,7 +724,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.complete_cooking",
               "Runtime": "python3.12",
@@ -642,7 +738,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -656,7 +756,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.assign_driver",
               "Runtime": "python3.12",
@@ -670,7 +770,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -684,7 +788,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
-                "S3Key": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z/millas-backend.zip"
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
               },
               "Handler": "services/workflow/step_functions_handlers.complete_delivery",
               "Runtime": "python3.12",
@@ -698,7 +802,11 @@
                   "MENU_TABLE": "dev-Menu",
                   "USERS_TABLE": "dev-Users",
                   "TENANT_ID": "200millas",
-                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images"
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
                 }
               },
               "Role": "arn:aws:iam::722204368591:role/LabRole"
@@ -707,204 +815,372 @@
               "CompleteDeliveryLogGroup"
             ]
           },
-          "LoginLambdaVersionXvjGBuP9I1k64j9AMA102an36hdidd4tQUXC2EVY": {
+          "HandleOrderFailureLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+              },
+              "Handler": "services/workflow/step_functions_handlers.handle_order_failure",
+              "Runtime": "python3.12",
+              "FunctionName": "millas-backend-dev-handleOrderFailure",
+              "MemorySize": 1024,
+              "Timeout": 30,
+              "Environment": {
+                "Variables": {
+                  "ORDERS_TABLE": "dev-Orders",
+                  "WORKFLOW_TABLE": "dev-Workflow",
+                  "MENU_TABLE": "dev-Menu",
+                  "USERS_TABLE": "dev-Users",
+                  "TENANT_ID": "200millas",
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
+                }
+              },
+              "Role": "arn:aws:iam::722204368591:role/LabRole"
+            },
+            "DependsOn": [
+              "HandleOrderFailureLogGroup"
+            ]
+          },
+          "WebsocketConnectLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+              },
+              "Handler": "services/websocket/handler.connect",
+              "Runtime": "python3.12",
+              "FunctionName": "millas-backend-dev-websocketConnect",
+              "MemorySize": 1024,
+              "Timeout": 10,
+              "Environment": {
+                "Variables": {
+                  "ORDERS_TABLE": "dev-Orders",
+                  "WORKFLOW_TABLE": "dev-Workflow",
+                  "MENU_TABLE": "dev-Menu",
+                  "USERS_TABLE": "dev-Users",
+                  "TENANT_ID": "200millas",
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
+                }
+              },
+              "Role": "arn:aws:iam::722204368591:role/LabRole"
+            },
+            "DependsOn": [
+              "WebsocketConnectLogGroup"
+            ]
+          },
+          "WebsocketDisconnectLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+              },
+              "Handler": "services/websocket/handler.disconnect",
+              "Runtime": "python3.12",
+              "FunctionName": "millas-backend-dev-websocketDisconnect",
+              "MemorySize": 1024,
+              "Timeout": 10,
+              "Environment": {
+                "Variables": {
+                  "ORDERS_TABLE": "dev-Orders",
+                  "WORKFLOW_TABLE": "dev-Workflow",
+                  "MENU_TABLE": "dev-Menu",
+                  "USERS_TABLE": "dev-Users",
+                  "TENANT_ID": "200millas",
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
+                }
+              },
+              "Role": "arn:aws:iam::722204368591:role/LabRole"
+            },
+            "DependsOn": [
+              "WebsocketDisconnectLogGroup"
+            ]
+          },
+          "WebsocketDefaultLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-ed03750a-96c8",
+                "S3Key": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z/millas-backend.zip"
+              },
+              "Handler": "services/websocket/handler.default",
+              "Runtime": "python3.12",
+              "FunctionName": "millas-backend-dev-websocketDefault",
+              "MemorySize": 1024,
+              "Timeout": 10,
+              "Environment": {
+                "Variables": {
+                  "ORDERS_TABLE": "dev-Orders",
+                  "WORKFLOW_TABLE": "dev-Workflow",
+                  "MENU_TABLE": "dev-Menu",
+                  "USERS_TABLE": "dev-Users",
+                  "TENANT_ID": "200millas",
+                  "MENU_IMAGES_BUCKET": "millas-backend-dev-menu-images",
+                  "EVENTBRIDGE_BUS": "millas-backend-dev-event-bus",
+                  "SERVERLESS_SERVICE": "millas-backend",
+                  "SERVERLESS_STAGE": "dev",
+                  "AWS_ACCOUNT_ID": "722204368591"
+                }
+              },
+              "Role": "arn:aws:iam::722204368591:role/LabRole"
+            },
+            "DependsOn": [
+              "WebsocketDefaultLogGroup"
+            ]
+          },
+          "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "LoginLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "RegisterLambdaVersionmia9J79PcDEKzGriyIaa6OF0Kh0VXHzZEzWEscnw5tM": {
+          "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "RegisterLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "AuthorizeLambdaVersionogfYKXqZLUuHtt6kJ3q2htE0yVoQSFDpO30gc8I4vWg": {
+          "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AuthorizeLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "LogoutLambdaVersionyfN2lO7Ru0k691jqmG8uNmTiqBovyBUR5dkmHiDI": {
+          "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "LogoutLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "CreateOrderLambdaVersionk9wP3Hb80UmyluVzIlbCXhggNCUwGdm9eoG1i5te6o": {
+          "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CreateOrderLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetOrdersLambdaVersionN5vjuvvpWmWwLnqGuOJ7eaRkgJmBsnuCYDuCQcyuBdc": {
+          "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrdersLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetOrderLambdaVersioniPDaFS49nnYRAuSKyPW4LjyVol5BkEax7b5wnE9GM": {
+          "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrderLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "UpdateWorkflowLambdaVersionEpXkwzkwVuRnsUodCMpevCzJJIroCT6JWUW3f8": {
+          "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "UpdateWorkflowLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetWorkflowLambdaVersionV7v3EWrjiCWUSJb5mFyIQeXzWTyqfmfXrsDcmV9A584": {
+          "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetWorkflowLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetCategoriesLambdaVersionBi59mbiPGAKrYDcmjN7KpweJzKkOZycqFioGWOiI": {
+          "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetCategoriesLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetItemsLambdaVersionQkgdSHQ2M6MBIhvhCHIQp33jUO7eSrx6usmJNF3A": {
+          "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetItemsLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "UploadMenuImageLambdaVersionca4bnw1jh85pvHC46LdjgQJ5yxJKX05TkX3r6Rr7c": {
+          "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "UploadMenuImageLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetDashboardLambdaVersionjmfNXpAHAdiPyKkkhRqw6swBPCC3i4CYceiTSLLA": {
+          "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetDashboardLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetOrderTimelineLambdaVersionBIaiLpz9O4m8Z4LikSL7WhWvKjNsrvmjSysJQIggqM": {
+          "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetOrderTimelineLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "GetStaffPerformanceLambdaVersionfxdBHyEcQYFmQyGXkeRntmPRUZfZHLslSVsxI2qI": {
+          "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "GetStaffPerformanceLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "ConfirmOrderLambdaVersionie6NsStSqyVabe73tZ3ZbmJNUgL77mfLR0IxaKjFl0": {
+          "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ConfirmOrderLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "AssignCookLambdaVersionAAaUZPybMkyKZm9phOHlPmCwGWOtfYWij66M2HX4aI4": {
+          "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AssignCookLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "CompleteCookingLambdaVersioncENxWNDb1AjGov58N4x8PWPuUDyAESvDYuRMWYUF7g": {
+          "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CompleteCookingLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "AssignDriverLambdaVersionRhxUlf3lt8RiRXePfz3iYAtYkHXMXJ1m5QgjokwKY": {
+          "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AssignDriverLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
-          "CompleteDeliveryLambdaVersion1WcbvD260zMOMERoJW4Dny5tCUDsQhZd9Qm3f9g": {
+          "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CompleteDeliveryLambdaFunction"
               },
-              "CodeSha256": "5cHYlzWOiJrYbekdc17htVCUHB+Tx0et7jMzzPmUP5k="
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+            }
+          },
+          "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "HandleOrderFailureLambdaFunction"
+              },
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+            }
+          },
+          "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "WebsocketConnectLambdaFunction"
+              },
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+            }
+          },
+          "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "WebsocketDisconnectLambdaFunction"
+              },
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
+            }
+          },
+          "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "WebsocketDefaultLambdaFunction"
+              },
+              "CodeSha256": "U9s83CdRFaVGPcDHexrXx+gd3iKVSvyO5U42FWpsyJM="
             }
           },
           "ApiGatewayRestApi": {
@@ -4345,6 +4621,7 @@
           "AuthorizeApiGatewayAuthorizer": {
             "Type": "AWS::ApiGateway::Authorizer",
             "Properties": {
+              "AuthorizerResultTtlInSeconds": 300,
               "IdentitySource": "method.request.header.Authorization",
               "Name": "authorize",
               "RestApiId": {
@@ -4376,7 +4653,7 @@
               "Type": "TOKEN"
             }
           },
-          "ApiGatewayDeployment1763853783031": {
+          "ApiGatewayDeployment1764512572899": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -4984,6 +5261,14 @@
                 {
                   "AttributeName": "created_at",
                   "AttributeType": "N"
+                },
+                {
+                  "AttributeName": "customer_id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "status",
+                  "AttributeType": "S"
                 }
               ],
               "KeySchema": [
@@ -5002,6 +5287,38 @@
                     },
                     {
                       "AttributeName": "created_at",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                },
+                {
+                  "IndexName": "customer-orders-index",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "customer_id",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "created_at",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                },
+                {
+                  "IndexName": "tenant-status-index",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "tenant_id",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "status",
                       "KeyType": "RANGE"
                     }
                   ],
@@ -5149,13 +5466,45 @@
               }
             }
           },
+          "CustomEventBus": {
+            "Type": "AWS::Events::EventBus",
+            "Properties": {
+              "Name": "millas-backend-dev-event-bus"
+            }
+          },
+          "OrderEventsRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+              "EventBusName": {
+                "Ref": "CustomEventBus"
+              },
+              "EventPattern": {
+                "source": [
+                  "orders.service",
+                  "workflow.service"
+                ],
+                "detail-type": [
+                  "OrderCreated",
+                  "OrderUpdated",
+                  "OrderConfirmed",
+                  "OrderCooking",
+                  "OrderPacking",
+                  "OrderInDelivery",
+                  "OrderDelivered",
+                  "OrderFailed"
+                ]
+              },
+              "State": "ENABLED",
+              "Description": "Captura todos los eventos relacionados con pedidos y workflow"
+            }
+          },
           "OrderWorkflowStateMachine": {
             "Type": "AWS::StepFunctions::StateMachine",
             "Properties": {
               "StateMachineName": "millas-backend-dev-order-workflow",
               "RoleArn": "arn:aws:iam::722204368591:role/LabRole",
               "DefinitionString": {
-                "Fn::Sub": "{\n  \"Comment\": \"Workflow automatizado para procesamiento de pedidos\",\n  \"StartAt\": \"ConfirmOrder\",\n  \"States\": {\n    \"ConfirmOrder\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${ConfirmOrderLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.confirmResult\",\n      \"Next\": \"AssignCook\"\n    },\n    \"AssignCook\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignCookLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookResult\",\n      \"Next\": \"WaitForCooking\"\n    },\n    \"WaitForCooking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 300,\n      \"Comment\": \"Espera 5 minutos para cocinar (puede ser ajustado o reemplazado por callback)\",\n      \"Next\": \"CompleteCooking\"\n    },\n    \"CompleteCooking\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteCookingLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookingResult\",\n      \"Next\": \"WaitForPacking\"\n    },\n    \"WaitForPacking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 120,\n      \"Comment\": \"Espera 2 minutos para empacar\",\n      \"Next\": \"AssignDriver\"\n    },\n    \"AssignDriver\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignDriverLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.driverResult\",\n      \"Next\": \"WaitForDelivery\"\n    },\n    \"WaitForDelivery\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 600,\n      \"Comment\": \"Espera 10 minutos para entrega (simulado)\",\n      \"Next\": \"CompleteDelivery\"\n    },\n    \"CompleteDelivery\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteDeliveryLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.deliveryResult\",\n      \"End\": true\n    }\n  }\n}\n"
+                "Fn::Sub": "{\n  \"Comment\": \"Workflow automatizado para procesamiento de pedidos\",\n  \"StartAt\": \"ConfirmOrder\",\n  \"States\": {\n    \"ConfirmOrder\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${ConfirmOrderLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.confirmResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"AssignCook\"\n    },\n    \"AssignCook\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignCookLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForCooking\"\n    },\n    \"WaitForCooking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 300,\n      \"Comment\": \"Espera simulada de cocción (5 min)\",\n      \"Next\": \"CompleteCooking\"\n    },\n    \"CompleteCooking\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteCookingLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookingResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForPacking\"\n    },\n    \"WaitForPacking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 120,\n      \"Comment\": \"Espera simulada de empaquetado (2 min)\",\n      \"Next\": \"AssignDriver\"\n    },\n    \"AssignDriver\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignDriverLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.driverResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForDelivery\"\n    },\n    \"WaitForDelivery\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 600,\n      \"Comment\": \"Espera simulada de entrega (10 min)\",\n      \"Next\": \"CompleteDelivery\"\n    },\n    \"CompleteDelivery\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteDeliveryLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.deliveryResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"End\": true\n    },\n    \"OrderFailed\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${HandleOrderFailureLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.failureResult\",\n      \"End\": true\n    }\n  }\n}\n"
               }
             }
           }
@@ -5170,7 +5519,7 @@
           "LoginLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "LoginLambdaVersionXvjGBuP9I1k64j9AMA102an36hdidd4tQUXC2EVY"
+              "Ref": "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-LoginLambdaFunctionQualifiedArn"
@@ -5179,7 +5528,7 @@
           "RegisterLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "RegisterLambdaVersionmia9J79PcDEKzGriyIaa6OF0Kh0VXHzZEzWEscnw5tM"
+              "Ref": "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-RegisterLambdaFunctionQualifiedArn"
@@ -5188,7 +5537,7 @@
           "AuthorizeLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AuthorizeLambdaVersionogfYKXqZLUuHtt6kJ3q2htE0yVoQSFDpO30gc8I4vWg"
+              "Ref": "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AuthorizeLambdaFunctionQualifiedArn"
@@ -5197,7 +5546,7 @@
           "LogoutLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "LogoutLambdaVersionyfN2lO7Ru0k691jqmG8uNmTiqBovyBUR5dkmHiDI"
+              "Ref": "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-LogoutLambdaFunctionQualifiedArn"
@@ -5206,7 +5555,7 @@
           "CreateOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CreateOrderLambdaVersionk9wP3Hb80UmyluVzIlbCXhggNCUwGdm9eoG1i5te6o"
+              "Ref": "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CreateOrderLambdaFunctionQualifiedArn"
@@ -5215,7 +5564,7 @@
           "GetOrdersLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrdersLambdaVersionN5vjuvvpWmWwLnqGuOJ7eaRkgJmBsnuCYDuCQcyuBdc"
+              "Ref": "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrdersLambdaFunctionQualifiedArn"
@@ -5224,7 +5573,7 @@
           "GetOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrderLambdaVersioniPDaFS49nnYRAuSKyPW4LjyVol5BkEax7b5wnE9GM"
+              "Ref": "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrderLambdaFunctionQualifiedArn"
@@ -5233,7 +5582,7 @@
           "UpdateWorkflowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UpdateWorkflowLambdaVersionEpXkwzkwVuRnsUodCMpevCzJJIroCT6JWUW3f8"
+              "Ref": "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-UpdateWorkflowLambdaFunctionQualifiedArn"
@@ -5242,7 +5591,7 @@
           "GetWorkflowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetWorkflowLambdaVersionV7v3EWrjiCWUSJb5mFyIQeXzWTyqfmfXrsDcmV9A584"
+              "Ref": "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetWorkflowLambdaFunctionQualifiedArn"
@@ -5251,7 +5600,7 @@
           "GetCategoriesLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetCategoriesLambdaVersionBi59mbiPGAKrYDcmjN7KpweJzKkOZycqFioGWOiI"
+              "Ref": "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetCategoriesLambdaFunctionQualifiedArn"
@@ -5260,7 +5609,7 @@
           "GetItemsLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetItemsLambdaVersionQkgdSHQ2M6MBIhvhCHIQp33jUO7eSrx6usmJNF3A"
+              "Ref": "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetItemsLambdaFunctionQualifiedArn"
@@ -5269,7 +5618,7 @@
           "UploadMenuImageLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UploadMenuImageLambdaVersionca4bnw1jh85pvHC46LdjgQJ5yxJKX05TkX3r6Rr7c"
+              "Ref": "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-UploadMenuImageLambdaFunctionQualifiedArn"
@@ -5278,7 +5627,7 @@
           "GetDashboardLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetDashboardLambdaVersionjmfNXpAHAdiPyKkkhRqw6swBPCC3i4CYceiTSLLA"
+              "Ref": "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetDashboardLambdaFunctionQualifiedArn"
@@ -5287,7 +5636,7 @@
           "GetOrderTimelineLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetOrderTimelineLambdaVersionBIaiLpz9O4m8Z4LikSL7WhWvKjNsrvmjSysJQIggqM"
+              "Ref": "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetOrderTimelineLambdaFunctionQualifiedArn"
@@ -5296,7 +5645,7 @@
           "GetStaffPerformanceLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "GetStaffPerformanceLambdaVersionfxdBHyEcQYFmQyGXkeRntmPRUZfZHLslSVsxI2qI"
+              "Ref": "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-GetStaffPerformanceLambdaFunctionQualifiedArn"
@@ -5305,7 +5654,7 @@
           "ConfirmOrderLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ConfirmOrderLambdaVersionie6NsStSqyVabe73tZ3ZbmJNUgL77mfLR0IxaKjFl0"
+              "Ref": "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-ConfirmOrderLambdaFunctionQualifiedArn"
@@ -5314,7 +5663,7 @@
           "AssignCookLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AssignCookLambdaVersionAAaUZPybMkyKZm9phOHlPmCwGWOtfYWij66M2HX4aI4"
+              "Ref": "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AssignCookLambdaFunctionQualifiedArn"
@@ -5323,7 +5672,7 @@
           "CompleteCookingLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CompleteCookingLambdaVersioncENxWNDb1AjGov58N4x8PWPuUDyAESvDYuRMWYUF7g"
+              "Ref": "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CompleteCookingLambdaFunctionQualifiedArn"
@@ -5332,7 +5681,7 @@
           "AssignDriverLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AssignDriverLambdaVersionRhxUlf3lt8RiRXePfz3iYAtYkHXMXJ1m5QgjokwKY"
+              "Ref": "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-AssignDriverLambdaFunctionQualifiedArn"
@@ -5341,10 +5690,46 @@
           "CompleteDeliveryLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CompleteDeliveryLambdaVersion1WcbvD260zMOMERoJW4Dny5tCUDsQhZd9Qm3f9g"
+              "Ref": "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY"
             },
             "Export": {
               "Name": "sls-millas-backend-dev-CompleteDeliveryLambdaFunctionQualifiedArn"
+            }
+          },
+          "HandleOrderFailureLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k"
+            },
+            "Export": {
+              "Name": "sls-millas-backend-dev-HandleOrderFailureLambdaFunctionQualifiedArn"
+            }
+          },
+          "WebsocketConnectLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU"
+            },
+            "Export": {
+              "Name": "sls-millas-backend-dev-WebsocketConnectLambdaFunctionQualifiedArn"
+            }
+          },
+          "WebsocketDisconnectLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns"
+            },
+            "Export": {
+              "Name": "sls-millas-backend-dev-WebsocketDisconnectLambdaFunctionQualifiedArn"
+            }
+          },
+          "WebsocketDefaultLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w"
+            },
+            "Export": {
+              "Name": "sls-millas-backend-dev-WebsocketDefaultLambdaFunctionQualifiedArn"
             }
           },
           "ServiceEndpoint": {
@@ -5451,10 +5836,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "LoginLambdaVersionXvjGBuP9I1k64j9AMA102an36hdidd4tQUXC2EVY"
+        "versionLogicalId": "LoginLambdaVersionKRoVlQq51xVLVB8XWZRazcwFmlF5Ziz28Mgzt1ce34Q"
       },
       "register": {
         "handler": "services/auth/handler.register",
@@ -5496,10 +5881,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "RegisterLambdaVersionmia9J79PcDEKzGriyIaa6OF0Kh0VXHzZEzWEscnw5tM"
+        "versionLogicalId": "RegisterLambdaVersion0XQU3AeuYttyVZoJ2DGKgAIgwazyEgwfeg4fxyCoQM"
       },
       "authorize": {
         "handler": "services/auth/handler.authorize",
@@ -5508,10 +5893,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AuthorizeLambdaVersionogfYKXqZLUuHtt6kJ3q2htE0yVoQSFDpO30gc8I4vWg"
+        "versionLogicalId": "AuthorizeLambdaVersionm6UhWWYl5Xqny4mvX7fLXnR9maNDb2w0S1BLE6neBOo"
       },
       "logout": {
         "handler": "services/auth/handler.logout",
@@ -5539,12 +5924,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5561,10 +5949,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "LogoutLambdaVersionyfN2lO7Ru0k691jqmG8uNmTiqBovyBUR5dkmHiDI"
+        "versionLogicalId": "LogoutLambdaVersiongApD05I7bugd9iYPwq34CkxQmapaT2RvTd76BVk"
       },
       "createOrder": {
         "handler": "services/orders/handler.create_order",
@@ -5581,23 +5969,24 @@
                 ],
                 "headers": [
                   "Content-Type",
-                  "X-Amz-Date",
                   "Authorization",
+                  "X-Amz-Date",
                   "X-Api-Key",
-                  "X-Amz-Security-Token",
-                  "X-Amz-User-Agent",
-                  "X-Amzn-Trace-Id"
+                  "X-Amz-Security-Token"
                 ],
                 "allowCredentials": false
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5614,10 +6003,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CreateOrderLambdaVersionk9wP3Hb80UmyluVzIlbCXhggNCUwGdm9eoG1i5te6o"
+        "versionLogicalId": "CreateOrderLambdaVersionED7ATkCBgb8mJUaX2MVA8XFMgdn3tKBWappRkupdlP0"
       },
       "getOrders": {
         "handler": "services/orders/handler.get_orders",
@@ -5645,12 +6034,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5667,10 +6059,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrdersLambdaVersionN5vjuvvpWmWwLnqGuOJ7eaRkgJmBsnuCYDuCQcyuBdc"
+        "versionLogicalId": "GetOrdersLambdaVersion3UAVltppY5ru7Kb8Gg3q1GGaxfcTyUQPUG7VTROxbPo"
       },
       "getOrder": {
         "handler": "services/orders/handler.get_order",
@@ -5698,12 +6090,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5720,10 +6115,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrderLambdaVersioniPDaFS49nnYRAuSKyPW4LjyVol5BkEax7b5wnE9GM"
+        "versionLogicalId": "GetOrderLambdaVersionWggL9K4Xbi73USX1r3KC8m6x5EEb6MP0m3GhPKGoFg"
       },
       "updateWorkflow": {
         "handler": "services/workflow/handler.update_workflow",
@@ -5751,12 +6146,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5773,10 +6171,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "UpdateWorkflowLambdaVersionEpXkwzkwVuRnsUodCMpevCzJJIroCT6JWUW3f8"
+        "versionLogicalId": "UpdateWorkflowLambdaVersionDxxcslc6bgqck7873YiP4u9KSiFAaQHihIfQ4Ny7A"
       },
       "getWorkflow": {
         "handler": "services/workflow/handler.get_workflow",
@@ -5804,12 +6202,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5826,10 +6227,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetWorkflowLambdaVersionV7v3EWrjiCWUSJb5mFyIQeXzWTyqfmfXrsDcmV9A584"
+        "versionLogicalId": "GetWorkflowLambdaVersion0XZUCB80mpK0zzi8Tmh0BchhYKP2VodgJ2IDQFVjJ0"
       },
       "getCategories": {
         "handler": "services/menu/handler.get_categories",
@@ -5871,10 +6272,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetCategoriesLambdaVersionBi59mbiPGAKrYDcmjN7KpweJzKkOZycqFioGWOiI"
+        "versionLogicalId": "GetCategoriesLambdaVersionArNZsDAWfBC3Ddqa20UUPefN4irfL8i3yhE3co0gNk"
       },
       "getItems": {
         "handler": "services/menu/handler.get_items",
@@ -5916,10 +6317,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetItemsLambdaVersionQkgdSHQ2M6MBIhvhCHIQp33jUO7eSrx6usmJNF3A"
+        "versionLogicalId": "GetItemsLambdaVersionTigwFVqZZ4HsoYQ7cFfZsrvA7NUxkuvczap3MQGY5A4"
       },
       "uploadMenuImage": {
         "handler": "services/menu/upload_image.upload_image",
@@ -5947,12 +6348,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -5969,10 +6373,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "UploadMenuImageLambdaVersionca4bnw1jh85pvHC46LdjgQJ5yxJKX05TkX3r6Rr7c"
+        "versionLogicalId": "UploadMenuImageLambdaVersionzlnTArrIVrdX87fNqs9kW3hCQuXXRdlhrO5Cn8f8bc"
       },
       "getDashboard": {
         "handler": "services/dashboard/handler.get_dashboard",
@@ -6000,12 +6404,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -6022,10 +6429,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetDashboardLambdaVersionjmfNXpAHAdiPyKkkhRqw6swBPCC3i4CYceiTSLLA"
+        "versionLogicalId": "GetDashboardLambdaVersionGRQnQt000w9KJrVm6Y5LPS8i7slFKCc2Sx6iyn7yps"
       },
       "getOrderTimeline": {
         "handler": "services/dashboard/handler.get_order_timeline",
@@ -6053,12 +6460,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -6075,10 +6485,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetOrderTimelineLambdaVersionBIaiLpz9O4m8Z4LikSL7WhWvKjNsrvmjSysJQIggqM"
+        "versionLogicalId": "GetOrderTimelineLambdaVersioniG3LwuimqT9C0QCiLD7AQ1LIyFpdyPGPs42EpXDJ3g"
       },
       "getStaffPerformance": {
         "handler": "services/dashboard/handler.get_staff_performance",
@@ -6106,12 +6516,15 @@
               },
               "integration": "AWS",
               "authorizer": {
+                "type": "token",
                 "name": "authorize",
                 "arn": {
                   "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"AuthorizeLambdaPermissionApiGateway\"][\"Properties\"][\"FunctionName\"]"
                 },
                 "managedExternally": false,
-                "identitySource": "method.request.header.Authorization"
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": []
               },
               "request": {
                 "passThrough": "NEVER"
@@ -6128,10 +6541,10 @@
         "module": ".",
         "package": {},
         "memory": 1024,
-        "timeout": 30,
+        "timeout": 29,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "GetStaffPerformanceLambdaVersionfxdBHyEcQYFmQyGXkeRntmPRUZfZHLslSVsxI2qI"
+        "versionLogicalId": "GetStaffPerformanceLambdaVersionHATePo0XmvUZgmEh9TRZUOBluQ7KrGeSnbw5Bp0pJU"
       },
       "confirmOrder": {
         "handler": "services/workflow/step_functions_handlers.confirm_order",
@@ -6143,7 +6556,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "ConfirmOrderLambdaVersionie6NsStSqyVabe73tZ3ZbmJNUgL77mfLR0IxaKjFl0"
+        "versionLogicalId": "ConfirmOrderLambdaVersion4A9hdmGQ9EPpK03GSXNU5mqvU4RjgRsIwXK6tXETFQ"
       },
       "assignCook": {
         "handler": "services/workflow/step_functions_handlers.assign_cook",
@@ -6155,7 +6568,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AssignCookLambdaVersionAAaUZPybMkyKZm9phOHlPmCwGWOtfYWij66M2HX4aI4"
+        "versionLogicalId": "AssignCookLambdaVersionY6gal1LSIFvoF3W6XdBq4SLt8bBmKqDilccF6d01w"
       },
       "completeCooking": {
         "handler": "services/workflow/step_functions_handlers.complete_cooking",
@@ -6167,7 +6580,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CompleteCookingLambdaVersioncENxWNDb1AjGov58N4x8PWPuUDyAESvDYuRMWYUF7g"
+        "versionLogicalId": "CompleteCookingLambdaVersionnD3xKwrG9IsHsPj8gYiCIjEcu17WELzXxCFfazLSoI"
       },
       "assignDriver": {
         "handler": "services/workflow/step_functions_handlers.assign_driver",
@@ -6179,7 +6592,7 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "AssignDriverLambdaVersionRhxUlf3lt8RiRXePfz3iYAtYkHXMXJ1m5QgjokwKY"
+        "versionLogicalId": "AssignDriverLambdaVersionVHB2XKPW6PVqSv9mBoXll3kInPxhdYOPsStF6A4B0"
       },
       "completeDelivery": {
         "handler": "services/workflow/step_functions_handlers.complete_delivery",
@@ -6191,7 +6604,55 @@
         "memory": 1024,
         "runtime": "python3.12",
         "vpc": {},
-        "versionLogicalId": "CompleteDeliveryLambdaVersion1WcbvD260zMOMERoJW4Dny5tCUDsQhZd9Qm3f9g"
+        "versionLogicalId": "CompleteDeliveryLambdaVersion0IDGyVPOz4EgFSiyavrTMgevXzyOWqXbwUKB3hLZuY"
+      },
+      "handleOrderFailure": {
+        "handler": "services/workflow/step_functions_handlers.handle_order_failure",
+        "timeout": 30,
+        "events": [],
+        "name": "millas-backend-dev-handleOrderFailure",
+        "module": ".",
+        "package": {},
+        "memory": 1024,
+        "runtime": "python3.12",
+        "vpc": {},
+        "versionLogicalId": "HandleOrderFailureLambdaVersion0P4X0ZLgXG7cw9RIutCpPbPV7ceOakAfjIaEnHqj4k"
+      },
+      "websocketConnect": {
+        "handler": "services/websocket/handler.connect",
+        "timeout": 10,
+        "events": [],
+        "name": "millas-backend-dev-websocketConnect",
+        "module": ".",
+        "package": {},
+        "memory": 1024,
+        "runtime": "python3.12",
+        "vpc": {},
+        "versionLogicalId": "WebsocketConnectLambdaVersionqDGyTIbxlSLAH04msEX61zxhYZpqd70KT7A81gJFU"
+      },
+      "websocketDisconnect": {
+        "handler": "services/websocket/handler.disconnect",
+        "timeout": 10,
+        "events": [],
+        "name": "millas-backend-dev-websocketDisconnect",
+        "module": ".",
+        "package": {},
+        "memory": 1024,
+        "runtime": "python3.12",
+        "vpc": {},
+        "versionLogicalId": "WebsocketDisconnectLambdaVersionylc8TYM11NmzNmQq4BuQTra3WT9jyhq4UiWBdrnns"
+      },
+      "websocketDefault": {
+        "handler": "services/websocket/handler.default",
+        "timeout": 10,
+        "events": [],
+        "name": "millas-backend-dev-websocketDefault",
+        "module": ".",
+        "package": {},
+        "memory": 1024,
+        "runtime": "python3.12",
+        "vpc": {},
+        "versionLogicalId": "WebsocketDefaultLambdaVersionzfuWHblZeGpJsWq6098YsKLqOWhWN67tOXIq0rt98w"
       }
     },
     "resources": {
@@ -6212,6 +6673,14 @@
               {
                 "AttributeName": "created_at",
                 "AttributeType": "N"
+              },
+              {
+                "AttributeName": "customer_id",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "status",
+                "AttributeType": "S"
               }
             ],
             "KeySchema": [
@@ -6230,6 +6699,38 @@
                   },
                   {
                     "AttributeName": "created_at",
+                    "KeyType": "RANGE"
+                  }
+                ],
+                "Projection": {
+                  "ProjectionType": "ALL"
+                }
+              },
+              {
+                "IndexName": "customer-orders-index",
+                "KeySchema": [
+                  {
+                    "AttributeName": "customer_id",
+                    "KeyType": "HASH"
+                  },
+                  {
+                    "AttributeName": "created_at",
+                    "KeyType": "RANGE"
+                  }
+                ],
+                "Projection": {
+                  "ProjectionType": "ALL"
+                }
+              },
+              {
+                "IndexName": "tenant-status-index",
+                "KeySchema": [
+                  {
+                    "AttributeName": "tenant_id",
+                    "KeyType": "HASH"
+                  },
+                  {
+                    "AttributeName": "status",
                     "KeyType": "RANGE"
                   }
                 ],
@@ -6377,13 +6878,45 @@
             }
           }
         },
+        "CustomEventBus": {
+          "Type": "AWS::Events::EventBus",
+          "Properties": {
+            "Name": "millas-backend-dev-event-bus"
+          }
+        },
+        "OrderEventsRule": {
+          "Type": "AWS::Events::Rule",
+          "Properties": {
+            "EventBusName": {
+              "Ref": "CustomEventBus"
+            },
+            "EventPattern": {
+              "source": [
+                "orders.service",
+                "workflow.service"
+              ],
+              "detail-type": [
+                "OrderCreated",
+                "OrderUpdated",
+                "OrderConfirmed",
+                "OrderCooking",
+                "OrderPacking",
+                "OrderInDelivery",
+                "OrderDelivered",
+                "OrderFailed"
+              ]
+            },
+            "State": "ENABLED",
+            "Description": "Captura todos los eventos relacionados con pedidos y workflow"
+          }
+        },
         "OrderWorkflowStateMachine": {
           "Type": "AWS::StepFunctions::StateMachine",
           "Properties": {
             "StateMachineName": "millas-backend-dev-order-workflow",
             "RoleArn": "arn:aws:iam::722204368591:role/LabRole",
             "DefinitionString": {
-              "Fn::Sub": "{\n  \"Comment\": \"Workflow automatizado para procesamiento de pedidos\",\n  \"StartAt\": \"ConfirmOrder\",\n  \"States\": {\n    \"ConfirmOrder\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${ConfirmOrderLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.confirmResult\",\n      \"Next\": \"AssignCook\"\n    },\n    \"AssignCook\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignCookLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookResult\",\n      \"Next\": \"WaitForCooking\"\n    },\n    \"WaitForCooking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 300,\n      \"Comment\": \"Espera 5 minutos para cocinar (puede ser ajustado o reemplazado por callback)\",\n      \"Next\": \"CompleteCooking\"\n    },\n    \"CompleteCooking\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteCookingLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookingResult\",\n      \"Next\": \"WaitForPacking\"\n    },\n    \"WaitForPacking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 120,\n      \"Comment\": \"Espera 2 minutos para empacar\",\n      \"Next\": \"AssignDriver\"\n    },\n    \"AssignDriver\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignDriverLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.driverResult\",\n      \"Next\": \"WaitForDelivery\"\n    },\n    \"WaitForDelivery\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 600,\n      \"Comment\": \"Espera 10 minutos para entrega (simulado)\",\n      \"Next\": \"CompleteDelivery\"\n    },\n    \"CompleteDelivery\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteDeliveryLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.deliveryResult\",\n      \"End\": true\n    }\n  }\n}\n"
+              "Fn::Sub": "{\n  \"Comment\": \"Workflow automatizado para procesamiento de pedidos\",\n  \"StartAt\": \"ConfirmOrder\",\n  \"States\": {\n    \"ConfirmOrder\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${ConfirmOrderLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.confirmResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"AssignCook\"\n    },\n    \"AssignCook\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignCookLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForCooking\"\n    },\n    \"WaitForCooking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 300,\n      \"Comment\": \"Espera simulada de cocción (5 min)\",\n      \"Next\": \"CompleteCooking\"\n    },\n    \"CompleteCooking\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteCookingLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.cookingResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForPacking\"\n    },\n    \"WaitForPacking\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 120,\n      \"Comment\": \"Espera simulada de empaquetado (2 min)\",\n      \"Next\": \"AssignDriver\"\n    },\n    \"AssignDriver\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${AssignDriverLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.driverResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"Next\": \"WaitForDelivery\"\n    },\n    \"WaitForDelivery\": {\n      \"Type\": \"Wait\",\n      \"Seconds\": 600,\n      \"Comment\": \"Espera simulada de entrega (10 min)\",\n      \"Next\": \"CompleteDelivery\"\n    },\n    \"CompleteDelivery\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${CompleteDeliveryLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.deliveryResult\",\n      \"TimeoutSeconds\": 30,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\"States.TaskFailed\", \"States.Timeout\"],\n          \"IntervalSeconds\": 2,\n          \"MaxAttempts\": 3,\n          \"BackoffRate\": 2.0\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\"States.ALL\"],\n          \"ResultPath\": \"$.error\",\n          \"Next\": \"OrderFailed\"\n        }\n      ],\n      \"End\": true\n    },\n    \"OrderFailed\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"${HandleOrderFailureLambdaFunction.Arn}\",\n      \"ResultPath\": \"$.failureResult\",\n      \"End\": true\n    }\n  }\n}\n"
             }
           }
         }
@@ -6408,6 +6941,24 @@
         "$ref": "$[\"service\"][\"resources\"]"
       },
       "outputs": {
+        "ApiGatewayRestApiId": {
+          "Description": "API Gateway REST API ID",
+          "Value": {
+            "Ref": "ApiGatewayRestApi"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-ApiGatewayId"
+          }
+        },
+        "ApiGatewayRestApiUrl": {
+          "Description": "URL base de la API Gateway",
+          "Value": {
+            "Fn::Sub": "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/dev"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-ApiGatewayUrl"
+          }
+        },
         "OrderWorkflowStateMachineArn": {
           "Description": "ARN de la Step Function para workflow de pedidos",
           "Value": {
@@ -6415,6 +6966,75 @@
           },
           "Export": {
             "Name": "millas-backend-dev-OrderWorkflowArn"
+          }
+        },
+        "OrderWorkflowStateMachineName": {
+          "Description": "Nombre de la Step Function",
+          "Value": {
+            "Fn::GetAtt": [
+              "OrderWorkflowStateMachine",
+              "Name"
+            ]
+          },
+          "Export": {
+            "Name": "millas-backend-dev-OrderWorkflowName"
+          }
+        },
+        "CustomEventBusName": {
+          "Description": "Nombre del Event Bus personalizado",
+          "Value": {
+            "Ref": "CustomEventBus"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-EventBusName"
+          }
+        },
+        "CustomEventBusArn": {
+          "Description": "ARN del Event Bus personalizado",
+          "Value": {
+            "Fn::GetAtt": [
+              "CustomEventBus",
+              "Arn"
+            ]
+          },
+          "Export": {
+            "Name": "millas-backend-dev-EventBusArn"
+          }
+        },
+        "OrdersTableName": {
+          "Description": "Nombre de la tabla de pedidos",
+          "Value": {
+            "Ref": "OrdersTable"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-OrdersTable"
+          }
+        },
+        "WorkflowTableName": {
+          "Description": "Nombre de la tabla de workflow",
+          "Value": {
+            "Ref": "WorkflowTable"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-WorkflowTable"
+          }
+        },
+        "MenuTableName": {
+          "Description": "Nombre de la tabla de menú",
+          "Value": {
+            "Ref": "MenuTable"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-MenuTable"
+          }
+        },
+        "UsersTableName": {
+          "Description": "Nombre de la tabla de usuarios",
+          "Value": {
+            "Ref": "UsersTable"
+          },
+          "Export": {
+            "Name": "millas-backend-dev-UsersTable"
           }
         },
         "MenuImagesBucketName": {
@@ -6426,22 +7046,28 @@
             "Name": "millas-backend-dev-MenuImagesBucket"
           }
         },
-        "ApiGatewayRestApiId": {
-          "Description": "API Gateway REST API ID",
-          "Value": {
-            "Ref": "ApiGatewayRestApi"
-          },
-          "Export": {
-            "Name": "millas-backend-dev-ApiGatewayId"
-          }
-        },
-        "ApiGatewayRestApiRootResourceId": {
-          "Description": "API Gateway Root Resource ID",
+        "CreateOrderFunctionName": {
+          "Description": "Nombre de la función Lambda createOrder",
           "Value": {
             "Fn::GetAtt": [
-              "ApiGatewayRestApi",
-              "RootResourceId"
+              "CreateOrderLambdaFunction",
+              "FunctionName"
             ]
+          },
+          "Export": {
+            "Name": "millas-backend-dev-CreateOrderFunction"
+          }
+        },
+        "LoginFunctionName": {
+          "Description": "Nombre de la función Lambda login",
+          "Value": {
+            "Fn::GetAtt": [
+              "LoginLambdaFunction",
+              "FunctionName"
+            ]
+          },
+          "Export": {
+            "Name": "millas-backend-dev-LoginFunction"
           }
         }
       }
@@ -6456,7 +7082,7 @@
     "artifact": "/home/ubuntu/200millas-Backend/.serverless/millas-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/millas-backend/dev/1763853801585-2025-11-22T23:23:21.585Z",
+    "artifactDirectoryName": "serverless/millas-backend/dev/1764512591906-2025-11-30T14:23:11.906Z",
     "artifact": "millas-backend.zip"
   }
 }

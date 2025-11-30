@@ -1,7 +1,7 @@
 import os
 from shared.utils import (
     response, success_response, error_response, error_handler,
-    parse_body, get_tenant_id, current_timestamp
+    parse_body, get_tenant_id, current_timestamp, get_path_param_from_path
 )
 from shared.dynamodb import DynamoDBService
 from shared.eventbridge import EventBridgeService
@@ -18,9 +18,13 @@ VALID_STATUSES = ['pending', 'confirmed', 'cooking', 'packing', 'in_delivery', '
 def update_workflow(event, context):
     logger.info("Updating workflow")
     
+    # ✅ Usar la función mejorada para extraer order_id del path
+    order_id = get_path_param_from_path(event, 'order_id')
+    
     body = parse_body(event)
-    order_id = event.get('pathParameters', {}).get('order_id')
     tenant_id = get_tenant_id(event)
+    
+    logger.info(f"Extracted order_id: {order_id}")
     
     if not order_id:
         raise ValidationError("order_id es requerido")
@@ -84,7 +88,10 @@ def update_workflow(event, context):
 def get_workflow(event, context):
     logger.info("Getting workflow")
     
-    order_id = event.get('pathParameters', {}).get('order_id')
+    # ✅ Usar la función mejorada para extraer order_id del path
+    order_id = get_path_param_from_path(event, 'order_id')
+    
+    logger.info(f"Extracted order_id: {order_id}")
     
     if not order_id:
         raise ValidationError("order_id es requerido")

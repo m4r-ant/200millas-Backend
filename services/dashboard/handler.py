@@ -1,5 +1,5 @@
 import os
-from shared.utils import success_response, error_handler, get_tenant_id
+from shared.utils import success_response, error_handler, get_tenant_id, get_path_param_from_path
 from shared.dynamodb import DynamoDBService
 from shared.errors import ValidationError
 from shared.logger import get_logger
@@ -7,6 +7,20 @@ from shared.logger import get_logger
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
+
+def _get_path_param(event, param_name):
+    """Extrae parámetro de path - Compatible con ambas estructuras"""
+    # Intentar pathParameters primero
+    path_params = event.get('pathParameters') or {}
+    if path_params.get(param_name):
+        return path_params.get(param_name)
+    
+    # Intentar directamente en event (Lambda Proxy Integration antigua)
+    if param_name in event:
+        return event.get(param_name)
+    
+    logger.warning(f"Path parameter '{param_name}' not found in event")
+    return None
 
 @error_handler
 def get_dashboard(event, context):
@@ -48,7 +62,10 @@ def get_dashboard(event, context):
 def get_order_timeline(event, context):
     logger.info("Getting order timeline")
     
-    order_id = event.get('pathParameters', {}).get('order_id')
+    # ✅ Usar la función mejorada para extraer order_id del path
+    order_id = get_path_param_from_path(event, 'order_id')
+    
+    logger.info(f"Extracted order_id: {order_id}")
     
     if not order_id:
         raise ValidationError("order_id es requerido")
