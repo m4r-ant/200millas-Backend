@@ -194,6 +194,41 @@ def get_user_email(event):
         logger.error(f"Error getting email: {str(e)}")
         return None
 
+def get_user_type(event):
+    """
+    Extrae user_type del contexto del autorizador.
+    
+    Retorna: 'customer', 'staff', 'chef', 'driver', 'admin'
+    """
+    try:
+        logger.info("Extracting user_type from event")
+        
+        # ✅ Intentar en requestContext.authorizer (API Gateway REST)
+        request_context = event.get('requestContext', {})
+        if request_context:
+            authorizer = request_context.get('authorizer', {})
+            user_type = authorizer.get('user_type')
+            
+            if user_type:
+                result = str(user_type).strip().lower()
+                logger.info(f"✓ user_type found in authorizer: {result}")
+                return result
+        
+        # ✅ Intentar directamente en el evento
+        user_type = event.get('user_type')
+        if user_type:
+            result = str(user_type).strip().lower()
+            logger.info(f"✓ user_type found in event: {result}")
+            return result
+        
+        # ✅ Default a customer si no se especifica
+        logger.warning("user_type not found, defaulting to 'customer'")
+        return 'customer'
+        
+    except Exception as e:
+        logger.error(f"Error getting user_type: {str(e)}")
+        return 'customer'
+
 def parse_body(event):
     """Parsea el body del evento"""
     body = event.get('body')

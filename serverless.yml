@@ -112,6 +112,28 @@ functions:
             resultTtlInSeconds: 300
             identitySource: method.request.header.Authorization
             type: token
+  
+  updateOrderStatus:
+    handler: services/orders/handler.update_order_status
+    events:
+      - http:
+          path: /orders/{order_id}/status
+          method: patch
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   updateWorkflow:
     handler: services/workflow/handler.update_workflow

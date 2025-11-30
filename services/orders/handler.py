@@ -6,15 +6,16 @@ from decimal import Decimal
 from shared.utils import (
     response, success_response, error_response, error_handler, 
     parse_body, get_tenant_id, get_user_id, get_user_email, current_timestamp,
-    get_path_param_from_path
+    get_path_param_from_path, get_user_type
 )
 from shared.dynamodb import DynamoDBService
 from shared.eventbridge import EventBridgeService
-from shared.errors import NotFoundError, ValidationError
+from shared.errors import NotFoundError, ValidationError, UnauthorizedError
 from shared.logger import get_logger
 
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
+workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
 stepfunctions = boto3.client('stepfunctions')
 
 @error_handler
@@ -272,3 +273,227 @@ def get_order(event, context):
     logger.info(f"Order details retrieved: {order_id}")
     
     return success_response(serialized_order)
+
+
+# ============================================================================
+# NUEVA FUNCIÓN: Actualizar estado de pedido
+# ============================================================================
+
+@error_handler
+def update_order_status(event, context):
+    """
+    Actualiza el estado de una orden.
+    
+    Flujo de estados válidos:
+    pending → cooking → ready → dispatched → delivered
+    
+    Permisos:
+    - Chef (staff): puede cambiar a cooking, ready, packing
+    - Repartidor (driver): puede cambiar a dispatched, delivered
+    - Admin: puede cambiar a cualquier estado
+    
+    Path: PATCH /orders/{order_id}/status
+    Body: { "status": "ready" }
+    """
+    
+    logger.info("Updating order status")
+    
+    # ✅ Extraer parámetros
+    order_id = get_path_param_from_path(event, 'order_id')
+    tenant_id = get_tenant_id(event)
+    user_id = get_user_id(event)
+    user_email = get_user_email(event)
+    user_type = get_user_type(event)
+    body = parse_body(event)
+    
+    logger.info(f"Order: {order_id} | User: {user_id} ({user_type}) | New Status: {body.get('status')}")
+    
+    # ✅ Validar order_id
+    if not order_id:
+        raise ValidationError("order_id es requerido")
+    
+    # ✅ Extraer y validar nuevo estado
+    new_status = body.get('status', '').strip().lower()
+    if not new_status:
+        raise ValidationError("status es requerido en el body")
+    
+    notes = body.get('notes', '').strip()
+    
+    # ✅ Obtener orden actual
+    order = orders_db.get_item({'order_id': order_id})
+    if not order:
+        logger.error(f"Order {order_id} not found")
+        raise NotFoundError(f"Pedido {order_id} no encontrado")
+    
+    current_status = order.get('status')
+    logger.info(f"Current status: {current_status}")
+    
+    # ✅ Validar transición de estado
+    if not _is_valid_transition(current_status, new_status):
+        logger.warning(f"Invalid transition: {current_status} → {new_status}")
+        raise ValidationError(
+            f"Transición no permitida: {current_status} → {new_status}"
+        )
+    
+    # ✅ Validar permisos por rol
+    _validate_permissions(user_type, current_status, new_status)
+    
+    # ✅ Validar que el cliente no actualice su propia orden
+    if user_type == 'customer':
+        raise UnauthorizedError("Clientes no pueden cambiar el estado de sus pedidos")
+    
+    timestamp = current_timestamp()
+    
+    # ✅ Actualizar orden en DynamoDB
+    update_data = {
+        'status': new_status,
+        'updated_at': timestamp,
+        'updated_by': user_email or user_id
+    }
+    
+    # Si es el primer cambio a cooking, registrar cuándo empezó
+    if new_status == 'cooking' and current_status == 'pending':
+        update_data['cooking_started_at'] = timestamp
+    
+    # Si es entrega, registrar cuándo se completó
+    if new_status == 'delivered':
+        update_data['delivered_at'] = timestamp
+    
+    orders_db.update_item({'order_id': order_id}, update_data)
+    logger.info(f"Order {order_id} updated to {new_status}")
+    
+    # ✅ Actualizar workflow
+    workflow = workflow_db.get_item({'order_id': order_id})
+    if not workflow:
+        workflow = {'order_id': order_id, 'steps': []}
+    
+    # Completar el paso anterior si existe
+    if workflow.get('steps'):
+        last_step = workflow['steps'][-1]
+        if last_step.get('status') == current_status and not last_step.get('completed_at'):
+            last_step['completed_at'] = timestamp
+            logger.info(f"Completed previous step: {current_status}")
+    
+    # Agregar nuevo step
+    new_step = {
+        'status': new_status,
+        'assigned_to': user_email or user_id,
+        'started_at': timestamp,
+        'completed_at': None,
+        'notes': notes if notes else None
+    }
+    
+    workflow['steps'].append(new_step)
+    workflow['current_status'] = new_status
+    workflow['updated_at'] = timestamp
+    
+    workflow_db.put_item(workflow)
+    logger.info(f"Workflow for {order_id} updated with new step: {new_status}")
+    
+    # ✅ Publicar evento en EventBridge para notificaciones en tiempo real
+    EventBridgeService.put_event(
+        source='orders.service',
+        detail_type='OrderStatusChanged',
+        detail={
+            'order_id': order_id,
+            'old_status': current_status,
+            'new_status': new_status,
+            'updated_by': user_email or user_id,
+            'user_type': user_type,
+            'timestamp': timestamp,
+            'notes': notes
+        },
+        tenant_id=tenant_id
+    )
+    logger.info(f"Event published: OrderStatusChanged for {order_id}")
+    
+    # ✅ Retornar respuesta
+    return success_response({
+        'order_id': order_id,
+        'old_status': current_status,
+        'new_status': new_status,
+        'updated_at': timestamp,
+        'message': f'Pedido actualizado a {new_status}'
+    }, 200)
+
+
+# ============================================================================
+# FUNCIONES AUXILIARES
+# ============================================================================
+
+def _is_valid_transition(current_status, new_status):
+    """
+    Valida si una transición de estado es permitida.
+    
+    Flujo de estados:
+    pending → cooking → ready → dispatched → delivered
+    
+    También permite:
+    pending → cooking → packing → dispatched → delivered
+    
+    Y estados de fallo:
+    Cualquier estado → failed (para manejar errores)
+    """
+    
+    valid_transitions = {
+        'pending': ['cooking', 'confirmed'],
+        'confirmed': ['cooking'],
+        'cooking': ['ready', 'packing'],
+        'ready': ['dispatched', 'packing'],
+        'packing': ['dispatched'],
+        'dispatched': ['delivered'],
+        'delivered': [],
+        'failed': []
+    }
+    
+    allowed = valid_transitions.get(current_status, [])
+    is_valid = new_status in allowed
+    
+    logger.info(f"Transition validation: {current_status} → {new_status} = {is_valid}")
+    return is_valid
+
+
+def _validate_permissions(user_type, current_status, new_status):
+    """
+    Valida que el usuario tenga permiso para hacer este cambio de estado.
+    
+    Permisos:
+    - chef/staff: cooking, ready, packing
+    - driver: dispatched, delivered
+    - admin: todo
+    """
+    
+    logger.info(f"Validating permissions: user_type={user_type}, transition={current_status}→{new_status}")
+    
+    # Admin puede hacer todo
+    if user_type == 'admin':
+        logger.info("Admin user, permissions granted")
+        return True
+    
+    # Chef solo puede cambiar a estados de cocina
+    if user_type == 'staff' or user_type == 'chef':
+        allowed_statuses = ['cooking', 'ready', 'packing', 'confirmed']
+        if new_status not in allowed_statuses:
+            logger.warning(f"Chef tried to change to {new_status}")
+            raise UnauthorizedError(
+                f"Como chef, solo puedes cambiar a: {', '.join(allowed_statuses)}"
+            )
+        logger.info("Chef permissions validated")
+        return True
+    
+    # Driver solo puede cambiar a estados de entrega
+    if user_type == 'driver':
+        allowed_statuses = ['dispatched', 'delivered']
+        if new_status not in allowed_statuses:
+            logger.warning(f"Driver tried to change to {new_status}")
+            raise UnauthorizedError(
+                f"Como repartidor, solo puedes cambiar a: {', '.join(allowed_statuses)}"
+            )
+        logger.info("Driver permissions validated")
+        return True
+    
+    # Otros tipos no pueden cambiar estado
+    logger.warning(f"User type {user_type} not authorized to change order status")
+    raise UnauthorizedError(
+        f"Tu tipo de usuario ({user_type}) no puede cambiar el estado de pedidos"
+    )
