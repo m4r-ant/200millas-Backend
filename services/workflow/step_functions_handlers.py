@@ -1,3 +1,6 @@
+# FILE: services/workflow/step_functions_handlers.py
+# REEMPLAZA COMPLETAMENTE ESTE ARCHIVO
+
 """
 Lambda handlers para Step Functions - Workflow automatizado
 Cada función maneja un estado específico del workflow
@@ -32,7 +35,7 @@ def confirm_order(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # Actualizar orden
+        # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'confirmed', 'updated_at': timestamp}
@@ -81,7 +84,6 @@ def confirm_order(event, context):
         
     except Exception as e:
         logger.error(f"Error confirming order: {str(e)}")
-        # ✅ Re-lanzar la excepción para que Step Functions la capture
         raise Exception(f"ConfirmOrderError: {str(e)}")
 
 
@@ -104,7 +106,7 @@ def assign_cook(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # Actualizar orden
+        # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'cooking', 'updated_at': timestamp}
@@ -172,7 +174,7 @@ def complete_cooking(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # Actualizar orden
+        # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'packing', 'updated_at': timestamp}
@@ -241,7 +243,7 @@ def assign_driver(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # Actualizar orden
+        # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'in_delivery', 'updated_at': timestamp}
@@ -310,7 +312,7 @@ def complete_delivery(event, context):
         if not order:
             raise ValueError(f"Order {order_id} not found")
         
-        # Actualizar orden
+        # ✅ ACTUALIZAR ORDERS TABLE
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'delivered', 'updated_at': timestamp}
@@ -370,7 +372,7 @@ def handle_order_failure(event, context):
         tenant_id = event.get('tenant_id') or event.get('Input', {}).get('tenant_id') or os.environ.get('TENANT_ID')
         timestamp = current_timestamp()
         
-        # Actualizar orden a estado fallido
+        # ✅ ACTUALIZAR ORDERS TABLE
         try:
             orders_db.update_item(
                 {'order_id': order_id},
@@ -417,9 +419,7 @@ def handle_order_failure(event, context):
         
     except Exception as e:
         logger.error(f"Error handling order failure: {str(e)}")
-        # No re-lanzar excepción en el handler de fallos
         return {
             'status': 'failed',
             'error': str(e)
         }
-

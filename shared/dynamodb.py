@@ -29,15 +29,45 @@ class DynamoDBService:
             if not updates:
                 return None
             
-            update_expr = "SET " + ", ".join([f"{k}=:{k}" for k in updates.keys()])
-            expr_values = {f":{k}": v for k, v in updates.items()}
+            # ✅ PALABRAS RESERVADAS en DynamoDB que necesitan escaparse
+            reserved_keywords = {
+                'status', 'data', 'type', 'name', 'value', 'key', 'range',
+                'order', 'index', 'table', 'timestamp', 'size', 'date',
+                'time', 'count', 'level', 'state', 'role', 'version'
+            }
             
-            response = self.table.update_item(
-                Key=key,
-                UpdateExpression=update_expr,
-                ExpressionAttributeValues=expr_values,
-                ReturnValues="ALL_NEW"
-            )
+            # Construir UpdateExpression con nombres escapados
+            update_parts = []
+            expr_names = {}
+            expr_values = {}
+            
+            for k, v in updates.items():
+                # Si la clave es una palabra reservada, escaparla
+                if k.lower() in reserved_keywords:
+                    placeholder = f"#{k}"
+                    expr_names[placeholder] = k
+                else:
+                    placeholder = k
+                
+                value_placeholder = f":{k}"
+                expr_values[value_placeholder] = v
+                update_parts.append(f"{placeholder} = {value_placeholder}")
+            
+            update_expr = "SET " + ", ".join(update_parts)
+            
+            # Construir parámetros
+            params = {
+                'Key': key,
+                'UpdateExpression': update_expr,
+                'ExpressionAttributeValues': expr_values,
+                'ReturnValues': "ALL_NEW"
+            }
+            
+            # Solo agregar ExpressionAttributeNames si hay palabras reservadas
+            if expr_names:
+                params['ExpressionAttributeNames'] = expr_names
+            
+            response = self.table.update_item(**params)
             return response.get('Attributes')
         except Exception as e:
             print(f"Error en update_item: {str(e)}")
