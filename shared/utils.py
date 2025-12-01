@@ -177,21 +177,46 @@ def get_user_id(event):
         return None
 
 def get_user_email(event):
-    """Extrae email del contexto del autorizador"""
+    """
+    Extrae email del contexto del autorizador
+    Soporta múltiples estructuras de eventos
+    
+    ✅ FIXED: Más robusta, devuelve None en lugar de fallar
+    """
     try:
-        # ✅ Intentar en requestContext.authorizer primero
-        authorizer = event.get('requestContext', {}).get('authorizer', {})
-        email = authorizer.get('email')
+        logger.info("Extracting email from event")
         
-        # ✅ Si no, intentar directamente en el evento
-        if not email:
-            email = event.get('email')
+        # ✅ OPCIÓN 1: requestContext.authorizer.email (API Gateway REST moderno)
+        request_context = event.get('requestContext', {})
+        if isinstance(request_context, dict):
+            authorizer = request_context.get('authorizer', {})
+            if isinstance(authorizer, dict):
+                email = authorizer.get('email')
+                if email:
+                    result = str(email).strip()
+                    logger.info(f"✓ Email found in requestContext.authorizer.email: {result}")
+                    return result
         
+        # ✅ OPCIÓN 2: Email directamente en event (Lambda Proxy antiguo)
+        email = event.get('email')
         if email:
-            return str(email).strip()
+            result = str(email).strip()
+            logger.info(f"✓ Email found in event.email: {result}")
+            return result
+        
+        # ✅ OPCIÓN 3: Si hay user_id, tratar de extraer email del token (como fallback)
+        user_id = get_user_id(event)
+        if user_id:
+            # El user_id suele ser la parte antes del @ del email
+            # Si el user_id es un formato "nombre", devolver None para que se use user_id
+            logger.warning(f"Email not found, returning None. Use user_id instead: {user_id}")
+            return None
+        
+        logger.warning("Email not found in event")
         return None
+        
     except Exception as e:
-        logger.error(f"Error getting email: {str(e)}")
+        logger.error(f"Error extracting email: {str(e)}")
         return None
 
 def get_user_type(event):

@@ -43,8 +43,10 @@ def get_available_orders(event, context):
     
     tenant_id = get_tenant_id(event)
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     
-    logger.info(f"Driver {user_email} requesting available orders")
+    driver_identifier = user_email or user_id
+    logger.info(f"Driver {driver_identifier} requesting available orders")
     
     # Query pedidos del tenant
     all_orders = orders_db.query_items(
@@ -103,16 +105,22 @@ def get_assigned_orders(event, context):
     """
     Obtiene pedidos asignados al driver actual
     Basado en el workflow, NO modifica nada
+    
+    ✅ FIXED: Mejor manejo de email fallido
     """
     logger.info("Getting assigned orders for driver")
     
     tenant_id = get_tenant_id(event)
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     
-    if not user_email:
-        raise UnauthorizedError("Email del usuario no encontrado")
+    # ✅ CAMBIO: Si no hay email, usar user_id como fallback
+    driver_identifier = user_email or user_id
     
-    logger.info(f"Driver {user_email} requesting assigned orders")
+    if not driver_identifier:
+        raise UnauthorizedError("No se pudo identificar al usuario. Email o ID no encontrado.")
+    
+    logger.info(f"Driver {driver_identifier} requesting assigned orders")
     
     # Obtener todos los pedidos del tenant
     all_orders = orders_db.query_items(
@@ -135,8 +143,12 @@ def get_assigned_orders(event, context):
                 assigned_to = step.get('assigned_to', '')
                 step_status = step.get('status', '')
                 
+                # ✅ CAMBIO: Comparar tanto con email como con user_id
+                is_assigned = (assigned_to == user_email or assigned_to == user_id or 
+                              assigned_to == driver_identifier)
+                
                 # Si el step está en delivery y asignado a este driver
-                if (assigned_to == user_email and 
+                if (is_assigned and 
                     step_status in ['in_delivery', 'dispatched'] and 
                     not step.get('completed_at')):
                     
@@ -160,11 +172,12 @@ def get_assigned_orders(event, context):
                     assigned_orders.append(order_with_workflow)
                     break  # Ya encontramos el step activo
     
-    logger.info(f"Found {len(assigned_orders)} assigned orders for {user_email}")
+    logger.info(f"Found {len(assigned_orders)} assigned orders for {driver_identifier}")
     
     return success_response({
         'orders': assigned_orders,
         'count': len(assigned_orders),
+        'driver_identifier': driver_identifier,
         'message': 'Step Functions asigna automáticamente estos pedidos'
     })
 
@@ -179,11 +192,14 @@ def get_order_detail(event, context):
     
     order_id = get_path_param_from_path(event, 'order_id')
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
+    
+    driver_identifier = user_email or user_id
     
     if not order_id:
         raise ValidationError("order_id es requerido")
     
-    logger.info(f"Driver {user_email} requesting order {order_id}")
+    logger.info(f"Driver {driver_identifier} requesting order {order_id}")
     
     # Obtener orden
     order = orders_db.get_item({'order_id': order_id})
@@ -231,16 +247,22 @@ def get_driver_stats(event, context):
     """
     Obtiene estadísticas del driver
     Basado en workflow histórico
+    
+    ✅ FIXED: Mejor manejo cuando email no está disponible
     """
     logger.info("Getting driver statistics")
     
     tenant_id = get_tenant_id(event)
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     
-    if not user_email:
-        raise UnauthorizedError("Email del usuario no encontrado")
+    # ✅ CAMBIO: Si no hay email, usar user_id como fallback
+    driver_identifier = user_email or user_id
     
-    logger.info(f"Getting stats for driver {user_email}")
+    if not driver_identifier:
+        raise UnauthorizedError("No se pudo identificar al usuario. Email o ID no encontrado.")
+    
+    logger.info(f"Getting stats for driver {driver_identifier}")
     
     # Obtener todos los pedidos del tenant
     all_orders = orders_db.query_items(
@@ -266,8 +288,12 @@ def get_driver_stats(event, context):
                 assigned_to = step.get('assigned_to', '')
                 step_status = step.get('status', '')
                 
+                # ✅ CAMBIO: Comparar tanto con email como con user_id
+                is_assigned = (assigned_to == user_email or assigned_to == user_id or 
+                              assigned_to == driver_identifier)
+                
                 # Solo contar si está asignado a este driver
-                if assigned_to == user_email:
+                if is_assigned:
                     # Pedidos entregados
                     if step_status == 'delivered' and step.get('completed_at'):
                         delivered += 1
@@ -292,7 +318,9 @@ def get_driver_stats(event, context):
     avg_time_minutes = int(avg_time_seconds / 60)
     
     stats = {
+        'driver_identifier': driver_identifier,
         'driver_email': user_email,
+        'driver_id': user_id,
         'total_deliveries': delivered,
         'in_transit': in_transit,
         'avg_delivery_time_minutes': avg_time_minutes,
@@ -302,7 +330,7 @@ def get_driver_stats(event, context):
         'message': 'Estadísticas basadas en entregas completadas por Step Functions'
     }
     
-    logger.info(f"Stats for {user_email}: {stats}")
+    logger.info(f"Stats for {driver_identifier}: {stats}")
     
     return success_response(stats)
 
@@ -317,11 +345,14 @@ def get_delivery_timeline(event, context):
     
     order_id = get_path_param_from_path(event, 'order_id')
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
+    
+    driver_identifier = user_email or user_id
     
     if not order_id:
         raise ValidationError("order_id es requerido")
     
-    logger.info(f"Driver {user_email} requesting timeline for {order_id}")
+    logger.info(f"Driver {driver_identifier} requesting timeline for {order_id}")
     
     # Obtener workflow
     workflow = workflow_db.get_item({'order_id': order_id})

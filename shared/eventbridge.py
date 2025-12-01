@@ -8,6 +8,14 @@ events_client = boto3.client('events')
 class EventBridgeService:
     @staticmethod
     def put_event(source, detail_type, detail, tenant_id):
+        """
+        Publica un evento en EventBridge
+        
+        Estos eventos disparan:
+        1. Notificaciones WebSocket
+        2. Logs
+        3. Otras integraciones
+        """
         try:
             # ✅ Usar el Event Bus personalizado
             event_bus_name = os.environ.get(
@@ -35,7 +43,7 @@ class EventBridgeService:
                 print(f"Falló publicar evento: {response}")
                 return False
             
-            print(f"Evento publicado a {event_bus_name}: {source}/{detail_type}")
+            print(f"✓ Evento publicado a {event_bus_name}: {source}/{detail_type}")
             return True
         except Exception as e:
             print(f"Error en EventBridge: {str(e)}")

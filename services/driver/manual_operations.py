@@ -5,7 +5,7 @@ Compatible con Step Functions pero permite control manual
 import os
 from shared.utils import (
     success_response, error_handler, get_tenant_id, get_user_email, 
-    parse_body, current_timestamp, get_path_param_from_path
+    parse_body, current_timestamp, get_path_param_from_path, get_user_id
 )
 from shared.dynamodb import DynamoDBService
 from shared.eventbridge import EventBridgeService
@@ -30,13 +30,17 @@ def pickup_order(event, context):
     
     order_id = get_path_param_from_path(event, 'order_id')
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     tenant_id = get_tenant_id(event)
+    
+    # ✅ Usar email si existe, sino user_id
+    driver_identifier = user_email or user_id
     
     if not order_id:
         raise ValidationError("order_id es requerido")
     
-    if not user_email:
-        raise UnauthorizedError("Email del usuario no encontrado")
+    if not driver_identifier:
+        raise UnauthorizedError("No se pudo identificar al usuario")
     
     # Verificar que el pedido existe y está en estado 'ready'
     order = orders_db.get_item({'order_id': order_id})
@@ -53,15 +57,15 @@ def pickup_order(event, context):
     timestamp = current_timestamp()
     
     # ✅ Actualizar Orders Table
-    logger.info(f"Updating order {order_id} to in_delivery, assigned to {user_email}")
+    logger.info(f"Updating order {order_id} to in_delivery, assigned to {driver_identifier}")
     orders_db.update_item(
         {'order_id': order_id},
         {
             'status': 'in_delivery',
-            'assigned_driver': user_email,
+            'assigned_driver': driver_identifier,
             'pickup_time': timestamp,
             'updated_at': timestamp,
-            'updated_by': user_email
+            'updated_by': driver_identifier
         }
     )
     
@@ -84,10 +88,10 @@ def pickup_order(event, context):
     # Agregar nuevo step
     new_step = {
         'status': 'in_delivery',
-        'assigned_to': user_email,
+        'assigned_to': driver_identifier,
         'started_at': timestamp,
         'completed_at': None,
-        'notes': f'Pedido recogido por {user_email}'
+        'notes': f'Pedido recogido por {driver_identifier}'
     }
     workflow['steps'].append(new_step)
     workflow['current_status'] = 'in_delivery'
@@ -102,7 +106,9 @@ def pickup_order(event, context):
         detail_type='OrderPickedUp',
         detail={
             'order_id': order_id,
+            'driver_identifier': driver_identifier,
             'driver_email': user_email,
+            'driver_id': user_id,
             'pickup_time': timestamp,
             'previous_status': 'ready',
             'new_status': 'in_delivery'
@@ -110,12 +116,12 @@ def pickup_order(event, context):
         tenant_id=tenant_id
     )
     
-    logger.info(f"✅ Order {order_id} picked up successfully by {user_email}")
+    logger.info(f"✅ Order {order_id} picked up successfully by {driver_identifier}")
     
     return success_response({
         'order_id': order_id,
         'status': 'in_delivery',
-        'assigned_driver': user_email,
+        'assigned_driver': driver_identifier,
         'pickup_time': timestamp,
         'message': '¡Pedido recogido exitosamente! Ya puedes proceder con la entrega.'
     }, 200)
@@ -135,8 +141,12 @@ def complete_order(event, context):
     
     order_id = get_path_param_from_path(event, 'order_id')
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     tenant_id = get_tenant_id(event)
     body = parse_body(event)
+    
+    # ✅ Usar email si existe, sino user_id
+    driver_identifier = user_email or user_id
     
     if not order_id:
         raise ValidationError("order_id es requerido")
@@ -148,7 +158,7 @@ def complete_order(event, context):
     
     # Verificar que está asignado a este driver
     assigned_driver = order.get('assigned_driver')
-    if assigned_driver != user_email:
+    if assigned_driver != driver_identifier:
         raise UnauthorizedError(
             f"Este pedido está asignado a {assigned_driver}. "
             f"Solo el driver asignado puede completar la entrega."
@@ -166,14 +176,14 @@ def complete_order(event, context):
     notes = body.get('notes', '')
     
     # ✅ Actualizar Orders Table
-    logger.info(f"Marking order {order_id} as delivered by {user_email}")
+    logger.info(f"Marking order {order_id} as delivered by {driver_identifier}")
     orders_db.update_item(
         {'order_id': order_id},
         {
             'status': 'delivered',
             'delivered_at': timestamp,
             'updated_at': timestamp,
-            'updated_by': user_email,
+            'updated_by': driver_identifier,
             'delivery_notes': notes if notes else 'Entrega completada'
         }
     )
@@ -205,7 +215,9 @@ def complete_order(event, context):
         detail_type='OrderDelivered',
         detail={
             'order_id': order_id,
+            'driver_identifier': driver_identifier,
             'driver_email': user_email,
+            'driver_id': user_id,
             'delivered_at': timestamp,
             'delivery_duration_seconds': delivery_duration,
             'delivery_duration_minutes': delivery_duration_minutes,
@@ -214,7 +226,7 @@ def complete_order(event, context):
         tenant_id=tenant_id
     )
     
-    logger.info(f"✅ Order {order_id} delivered successfully by {user_email} in {delivery_duration_minutes} minutes")
+    logger.info(f"✅ Order {order_id} delivered successfully by {driver_identifier} in {delivery_duration_minutes} minutes")
     
     return success_response({
         'order_id': order_id,
@@ -239,8 +251,12 @@ def cancel_pickup(event, context):
     
     order_id = get_path_param_from_path(event, 'order_id')
     user_email = get_user_email(event)
+    user_id = get_user_id(event)
     tenant_id = get_tenant_id(event)
     body = parse_body(event)
+    
+    # ✅ Usar email si existe, sino user_id
+    driver_identifier = user_email or user_id
     
     if not order_id:
         raise ValidationError("order_id es requerido")
@@ -254,7 +270,7 @@ def cancel_pickup(event, context):
     
     # Verificar que está asignado a este driver
     assigned_driver = order.get('assigned_driver')
-    if assigned_driver != user_email:
+    if assigned_driver != driver_identifier:
         raise UnauthorizedError(
             f"Este pedido está asignado a {assigned_driver}"
         )
@@ -277,7 +293,7 @@ def cancel_pickup(event, context):
             'assigned_driver': None,
             'pickup_time': None,
             'updated_at': timestamp,
-            'updated_by': user_email,
+            'updated_by': driver_identifier,
             'cancellation_reason': reason
         }
     )
@@ -289,7 +305,7 @@ def cancel_pickup(event, context):
         last_step = workflow['steps'][-1]
         if last_step.get('status') == 'in_delivery':
             last_step['completed_at'] = timestamp
-            last_step['notes'] = f'Cancelado por {user_email}. Razón: {reason}'
+            last_step['notes'] = f'Cancelado por {driver_identifier}. Razón: {reason}'
         
         # Agregar nuevo step de vuelta a ready
         new_step = {
@@ -311,14 +327,16 @@ def cancel_pickup(event, context):
         detail_type='OrderPickupCanceled',
         detail={
             'order_id': order_id,
+            'driver_identifier': driver_identifier,
             'driver_email': user_email,
+            'driver_id': user_id,
             'canceled_at': timestamp,
             'reason': reason
         },
         tenant_id=tenant_id
     )
     
-    logger.info(f"✅ Order {order_id} pickup canceled by {user_email}")
+    logger.info(f"✅ Order {order_id} pickup canceled by {driver_identifier}")
     
     return success_response({
         'order_id': order_id,

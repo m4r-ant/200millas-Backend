@@ -19,6 +19,10 @@ provider:
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
     AWS_ACCOUNT_ID: 722204368591
+    WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
+    WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
+    SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
+    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:722204368591:200millas-emails
 
 custom:
   pythonRequirements:
@@ -26,9 +30,6 @@ custom:
     layer: false
 
 functions:
-  # ============================================================================
-  # AUTH ENDPOINTS
-  # ============================================================================
   login:
     handler: services/auth/handler.login
     events:
@@ -64,9 +65,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # DRIVER ENDPOINTS - READ ONLY + MANUAL CONTROL
-  # ============================================================================
   getAvailableOrders:
     handler: services/driver/handler.get_available_orders
     events:
@@ -137,12 +135,9 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # DRIVER MANUAL CONTROL - NUEVOS ENDPOINTS
-  # ============================================================================
   pickupOrder:
     handler: services/driver/manual_operations.pickup_order
-    timeout: 30
+    timeout: 29
     events:
       - http:
           path: /driver/pickup/{order_id}
@@ -157,7 +152,7 @@ functions:
 
   completeOrder:
     handler: services/driver/manual_operations.complete_order
-    timeout: 30
+    timeout: 29
     events:
       - http:
           path: /driver/complete/{order_id}
@@ -172,7 +167,7 @@ functions:
 
   cancelPickup:
     handler: services/driver/manual_operations.cancel_pickup
-    timeout: 30
+    timeout: 29
     events:
       - http:
           path: /driver/cancel/{order_id}
@@ -185,9 +180,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # ORDER ENDPOINTS - PARA CLIENTES
-  # ============================================================================
   createOrder:
     handler: services/orders/handler.create_order
     events:
@@ -238,9 +230,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # DASHBOARD ENDPOINTS - MONITOREO
-  # ============================================================================
   getDashboard:
     handler: services/dashboard/handler.get_dashboard
     events:
@@ -283,9 +272,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # MENU ENDPOINTS
-  # ============================================================================
   getCategories:
     handler: services/menu/handler.get_categories
     events:
@@ -318,9 +304,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ============================================================================
-  # STEP FUNCTIONS HANDLERS - WORKFLOW AUTOMÁTICO HASTA 'ready'
-  # ============================================================================
   confirmOrder:
     handler: services/workflow/step_functions_handlers.confirm_order
     timeout: 30
@@ -336,6 +319,35 @@ functions:
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
     timeout: 30
+
+  wsConnect:
+    handler: services/websocket/handler.connect
+    events:
+      - websocket:
+          route: $connect
+
+  wsDisconnect:
+    handler: services/websocket/handler.disconnect
+    events:
+      - websocket:
+          route: $disconnect
+
+  wsDefault:
+    handler: services/websocket/handler.default
+    events:
+      - websocket:
+          route: $default
+
+  wsNotifyOrderUpdate:
+    handler: services/websocket/handler.notify_order_update
+    timeout: 30
+    environment:
+      WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
+      WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
+
+  sendOrderEmails:
+    handler: services/email/handler.send_order_notifications
+    timeout: 29
 
 resources:
   Resources:
@@ -495,10 +507,6 @@ resources:
         State: ENABLED
         Description: Captura todos los eventos relacionados con pedidos y workflow
 
-    # ============================================================================
-    # STEP FUNCTIONS - WORKFLOW AUTOMÁTICO HASTA 'ready'
-    # Driver continúa manualmente desde 'ready'
-    # ============================================================================
     OrderWorkflowStateMachine:
       Type: AWS::StepFunctions::StateMachine
       Properties:
@@ -556,7 +564,6 @@ resources:
               "WaitForCooking": {
                 "Type": "Wait",
                 "Seconds": 300,
-                "Comment": "Espera simulada de cocción (5 min)",
                 "Next": "CompleteCooking"
               },
               "CompleteCooking": {
@@ -584,12 +591,10 @@ resources:
               "WaitForDriverPickup": {
                 "Type": "Wait",
                 "Seconds": 7200,
-                "Comment": "Espera 2 horas a que un driver tome el pedido manualmente. Pedido queda en estado 'ready' disponible para drivers.",
                 "Next": "WorkflowCompleted"
               },
               "WorkflowCompleted": {
-                "Type": "Succeed",
-                "Comment": "Workflow automático completado en estado 'ready'. Driver debe tomar el pedido usando POST /driver/pickup/{order_id} y completar usando POST /driver/complete/{order_id}"
+                "Type": "Succeed"
               },
               "OrderFailed": {
                 "Type": "Task",
@@ -599,6 +604,117 @@ resources:
               }
             }
           }
+
+    WebSocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-WebSocketConnections
+        AttributeDefinitions:
+          - AttributeName: connection_id
+            AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connection_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-id-index
+            KeySchema:
+              - AttributeName: user_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: expires_at
+          Enabled: true
+
+    WebSocketSubscriptionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-WebSocketSubscriptions
+        AttributeDefinitions:
+          - AttributeName: subscription_id
+            AttributeType: S
+          - AttributeName: order_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: subscription_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: order-id-index
+            KeySchema:
+              - AttributeName: order_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    OrderStatusChangedRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventBusName: !Ref CustomEventBus
+        EventPattern:
+          source:
+            - orders.service
+            - driver.service
+            - workflow.service
+          detail-type:
+            - OrderCreated
+            - OrderStatusChanged
+            - OrderConfirmed
+            - OrderCooking
+            - OrderReady
+            - OrderPickedUp
+            - OrderInDelivery
+            - OrderDelivered
+            - OrderPickupCanceled
+        State: ENABLED
+        Targets:
+          - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
+            RoleArn: arn:aws:iam::722204368591:role/LabRole
+            Id: WsNotifyOrderUpdateTarget
+
+    OrderStatusChangedRulePermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !Ref WsNotifyOrderUpdateLambdaFunction
+        Action: lambda:InvokeFunction
+        Principal: events.amazonaws.com
+        SourceArn: !GetAtt OrderStatusChangedRule.Arn
+
+    OrderEmailsRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventBusName: !Ref CustomEventBus
+        EventPattern:
+          source:
+            - orders.service
+            - driver.service
+            - workflow.service
+          detail-type:
+            - OrderCreated
+            - OrderStatusChanged
+            - OrderConfirmed
+            - OrderCooking
+            - OrderReady
+            - OrderPickedUp
+            - OrderInDelivery
+            - OrderDelivered
+            - OrderPickupCanceled
+        State: ENABLED
+        Targets:
+          - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
+            RoleArn: arn:aws:iam::722204368591:role/LabRole
+            Id: SendOrderEmailsTarget
+
+    OrderEmailsRulePermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !Ref SendOrderEmailsLambdaFunction
+        Action: lambda:InvokeFunction
+        Principal: events.amazonaws.com
+        SourceArn: !GetAtt OrderEmailsRule.Arn
 
 outputs:
   ApiGatewayRestApiId:
@@ -625,3 +741,9 @@ outputs:
     Value: !Ref CustomEventBus
     Export:
       Name: ${self:service}-${sls:stage}-EventBusName
+
+  WebSocketApiEndpoint:
+    Description: WebSocket API Endpoint
+    Value: !Sub "wss://${WebsocketApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
+    Export:
+      Name: ${self:service}-${sls:stage}-WebSocketEndpoint
