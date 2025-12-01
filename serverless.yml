@@ -65,7 +65,7 @@ functions:
             type: token
 
   # ============================================================================
-  # DRIVER ENDPOINTS - READ ONLY (Step Functions maneja las transiciones)
+  # DRIVER ENDPOINTS - READ ONLY + MANUAL CONTROL
   # ============================================================================
   getAvailableOrders:
     handler: services/driver/handler.get_available_orders
@@ -129,6 +129,54 @@ functions:
       - http:
           path: /driver/timeline/{order_id}
           method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # DRIVER MANUAL CONTROL - NUEVOS ENDPOINTS
+  # ============================================================================
+  pickupOrder:
+    handler: services/driver/manual_operations.pickup_order
+    timeout: 30
+    events:
+      - http:
+          path: /driver/pickup/{order_id}
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  completeOrder:
+    handler: services/driver/manual_operations.complete_order
+    timeout: 30
+    events:
+      - http:
+          path: /driver/complete/{order_id}
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  cancelPickup:
+    handler: services/driver/manual_operations.cancel_pickup
+    timeout: 30
+    events:
+      - http:
+          path: /driver/cancel/{order_id}
+          method: post
           cors: true
           integration: lambda
           authorizer:
@@ -271,7 +319,7 @@ functions:
             type: token
 
   # ============================================================================
-  # STEP FUNCTIONS HANDLERS - WORKFLOW AUTOMÁTICO
+  # STEP FUNCTIONS HANDLERS - WORKFLOW AUTOMÁTICO HASTA 'ready'
   # ============================================================================
   confirmOrder:
     handler: services/workflow/step_functions_handlers.confirm_order
@@ -283,14 +331,6 @@ functions:
 
   completeCooking:
     handler: services/workflow/step_functions_handlers.complete_cooking
-    timeout: 30
-
-  assignDriver:
-    handler: services/workflow/step_functions_handlers.assign_driver
-    timeout: 30
-
-  completeDelivery:
-    handler: services/workflow/step_functions_handlers.complete_delivery
     timeout: 30
 
   handleOrderFailure:
@@ -439,20 +479,25 @@ resources:
           source:
             - orders.service
             - workflow.service
+            - driver.service
           detail-type:
             - OrderCreated
             - OrderUpdated
             - OrderConfirmed
             - OrderCooking
             - OrderPacking
+            - OrderReady
+            - OrderPickedUp
             - OrderInDelivery
             - OrderDelivered
+            - OrderPickupCanceled
             - OrderFailed
         State: ENABLED
         Description: Captura todos los eventos relacionados con pedidos y workflow
 
     # ============================================================================
-    # STEP FUNCTIONS STATE MACHINE - WORKFLOW AUTOMATIZADO
+    # STEP FUNCTIONS - WORKFLOW AUTOMÁTICO HASTA 'ready'
+    # Driver continúa manualmente desde 'ready'
     # ============================================================================
     OrderWorkflowStateMachine:
       Type: AWS::StepFunctions::StateMachine
@@ -461,7 +506,7 @@ resources:
         RoleArn: arn:aws:iam::722204368591:role/LabRole
         DefinitionString: !Sub |
           {
-            "Comment": "Workflow automatizado para procesamiento de pedidos",
+            "Comment": "Workflow automatizado hasta ready - Driver continúa manualmente",
             "StartAt": "ConfirmOrder",
             "States": {
               "ConfirmOrder": {
@@ -534,57 +579,17 @@ resources:
                     "Next": "OrderFailed"
                   }
                 ],
-                "Next": "AssignDriver"
+                "Next": "WaitForDriverPickup"
               },
-              "AssignDriver": {
-                "Type": "Task",
-                "Resource": "${AssignDriverLambdaFunction.Arn}",
-                "ResultPath": "$.driverResult",
-                "TimeoutSeconds": 30,
-                "Retry": [
-                  {
-                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
-                    "IntervalSeconds": 2,
-                    "MaxAttempts": 3,
-                    "BackoffRate": 2.0
-                  }
-                ],
-                "Catch": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "ResultPath": "$.error",
-                    "Next": "OrderFailed"
-                  }
-                ],
-                "Next": "WaitForDelivery"
-              },
-              "WaitForDelivery": {
+              "WaitForDriverPickup": {
                 "Type": "Wait",
-                "Seconds": 600,
-                "Comment": "Espera simulada de entrega (10 min)",
-                "Next": "CompleteDelivery"
+                "Seconds": 7200,
+                "Comment": "Espera 2 horas a que un driver tome el pedido manualmente. Pedido queda en estado 'ready' disponible para drivers.",
+                "Next": "WorkflowCompleted"
               },
-              "CompleteDelivery": {
-                "Type": "Task",
-                "Resource": "${CompleteDeliveryLambdaFunction.Arn}",
-                "ResultPath": "$.deliveryResult",
-                "TimeoutSeconds": 30,
-                "Retry": [
-                  {
-                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
-                    "IntervalSeconds": 2,
-                    "MaxAttempts": 3,
-                    "BackoffRate": 2.0
-                  }
-                ],
-                "Catch": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "ResultPath": "$.error",
-                    "Next": "OrderFailed"
-                  }
-                ],
-                "End": true
+              "WorkflowCompleted": {
+                "Type": "Succeed",
+                "Comment": "Workflow automático completado en estado 'ready'. Driver debe tomar el pedido usando POST /driver/pickup/{order_id} y completar usando POST /driver/complete/{order_id}"
               },
               "OrderFailed": {
                 "Type": "Task",
