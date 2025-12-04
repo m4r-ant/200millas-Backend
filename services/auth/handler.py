@@ -262,13 +262,29 @@ def get_profile(event, context):
         else:
             raise ValidationError("No se pudo identificar al usuario")
     
+    # Normalizar email a lowercase para la búsqueda
+    user_email = user_email.lower().strip() if user_email else None
+    
     logger.info(f"User {user_id} ({user_email}) requesting profile")
     
     user = users_db.get_item({'email': user_email})
     if not user:
         logger.error(f"User not found in database for email: {user_email}")
         logger.error(f"Available event context: {json.dumps(event.get('requestContext', {}).get('authorizer', {}), default=str)}")
-        raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
+        
+        # Si el login fue exitoso pero el usuario no existe, puede ser un problema de sincronización
+        # Intentar buscar por user_id como fallback
+        if user_id and '@' not in str(user_id):
+            possible_email = f"{user_id}@200millas.com"
+            logger.warning(f"Trying fallback email: {possible_email}")
+            user = users_db.get_item({'email': possible_email.lower()})
+            if user:
+                logger.info(f"Found user with fallback email: {possible_email}")
+                user_email = possible_email.lower()
+            else:
+                raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
+        else:
+            raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
     
     # Construir perfil (sin password)
     profile = {
