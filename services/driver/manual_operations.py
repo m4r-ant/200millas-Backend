@@ -226,6 +226,33 @@ def complete_order(event, context):
         tenant_id=tenant_id
     )
     
+    # ============================================
+    # MARCAR DRIVER COMO DISPONIBLE NUEVAMENTE
+    # ============================================
+    try:
+        availability_db = DynamoDBService(os.environ.get('STAFF_AVAILABILITY_TABLE', 'dev-StaffAvailability'))
+        driver_record = availability_db.get_item({'staff_id': driver_identifier})
+        if driver_record:
+            # Incrementar contador de entregas completadas
+            deliveries_completed = driver_record.get('deliveries_completed', 0) + 1
+            
+            # Marcar driver como disponible y limpiar current_order_id
+            availability_db.update_item(
+                {'staff_id': driver_identifier},
+                {
+                    'status': 'available',
+                    'current_order_id': None,
+                    'deliveries_completed': deliveries_completed,
+                    'updated_at': timestamp
+                }
+            )
+            logger.info(f"✅ Driver {driver_identifier} marked as available after completing order {order_id}")
+        else:
+            logger.warning(f"Driver {driver_identifier} not found in availability table")
+    except Exception as e:
+        logger.error(f"Error marking driver as available: {str(e)}")
+        # No fallar el proceso si esto falla
+    
     logger.info(f"✅ Order {order_id} delivered successfully by {driver_identifier} in {delivery_duration_minutes} minutes")
     
     return success_response({

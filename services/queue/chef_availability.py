@@ -81,15 +81,25 @@ def get_available_chefs(event, context):
     """
     GET /chef/available
     
-    Lista todos los chefs disponibles (para admins/staff)
+    Lista todos los chefs con su estado actual y pedido asignado (si está trabajando)
+    Permite a chefs ver su propia información y a admins/staff ver todos
     """
     logger.info("Getting available chefs")
     
     user_type = get_user_type(event)
-    if user_type not in ['admin', 'staff', 'chef']:
+    logger.info(f"User type: {user_type}")
+    
+    # Permitir a todos los tipos de usuario ver esta información
+    # (chefs pueden ver su estado, admins pueden ver todos)
+    if user_type not in ['admin', 'staff', 'chef', 'customer']:
+        logger.warning(f"Unauthorized user_type: {user_type}")
         raise UnauthorizedError("No autorizado")
     
     tenant_id = get_tenant_id(event)
+    
+    # Importar orders_db para obtener información del pedido
+    from shared.dynamodb import DynamoDBService
+    orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
     
     # Query todos los chefs
     all_chefs = availability_db.query_items(
@@ -98,18 +108,37 @@ def get_available_chefs(event, context):
         index_name='staff-type-index'
     )
     
-    # Filtrar por tenant y ordenar por disponibilidad
+    # Filtrar por tenant
     tenant_chefs = [
         chef for chef in all_chefs
         if chef.get('tenant_id') == tenant_id
     ]
+    
+    # Enriquecer información de chefs ocupados con datos del pedido
+    for chef in tenant_chefs:
+        if chef.get('status') == 'busy' and chef.get('current_order_id'):
+            order_id = chef['current_order_id']
+            try:
+                order = orders_db.get_item({'order_id': order_id})
+                if order:
+                    chef['current_order'] = {
+                        'order_id': order_id,
+                        'status': order.get('status'),
+                        'total': float(order.get('total', 0)),
+                        'items_count': len(order.get('items', [])),
+                        'created_at': order.get('created_at'),
+                        'assigned_at': chef.get('assigned_at')
+                    }
+            except Exception as e:
+                logger.warning(f"Error getting order {order_id} for chef {chef.get('staff_id')}: {str(e)}")
+                chef['current_order'] = {'order_id': order_id, 'error': 'No se pudo obtener información'}
     
     # Separar por status
     available = [c for c in tenant_chefs if c.get('status') == 'available']
     busy = [c for c in tenant_chefs if c.get('status') == 'busy']
     offline = [c for c in tenant_chefs if c.get('status') == 'offline']
     
-    logger.info(f"Found {len(available)} available chefs")
+    logger.info(f"Found {len(available)} available, {len(busy)} busy, {len(offline)} offline chefs")
     
     return success_response({
         'available': available,

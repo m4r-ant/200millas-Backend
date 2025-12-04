@@ -11,13 +11,14 @@ from shared.eventbridge import EventBridgeService
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
+availability_db = DynamoDBService(os.environ.get('STAFF_AVAILABILITY_TABLE', 'dev-StaffAvailability'))
 
 # SQS Client
 sqs = boto3.client('sqs')
 
 # URLs de las colas
 CHEF_QUEUE_URL = os.environ.get('CHEF_ASSIGNMENT_QUEUE')
-DRIVER_QUEUE_URL = os.environ.get('DRIVER_ASSIGNMENT_QUEUE')
+# NOTA: Drivers son asignados manualmente, no usan SQS
 
 
 def confirm_order(event, context):
@@ -146,11 +147,43 @@ def complete_cooking(event, context):
         
         timestamp = current_timestamp()
         
+        # Obtener el pedido para saber qué chef estaba asignado
+        order = orders_db.get_item({'order_id': order_id})
+        assigned_chef = order.get('assigned_chef') if order else None
+        
         # Marcar como ready
         orders_db.update_item(
             {'order_id': order_id},
             {'status': 'ready', 'updated_at': timestamp, 'ready_at': timestamp}
         )
+        
+        # ============================================
+        # MARCAR CHEF COMO DISPONIBLE NUEVAMENTE
+        # ============================================
+        if assigned_chef:
+            try:
+                # Obtener registro actual del chef
+                chef_record = availability_db.get_item({'staff_id': assigned_chef})
+                if chef_record:
+                    # Incrementar contador de pedidos completados
+                    orders_completed = chef_record.get('orders_completed', 0) + 1
+                    
+                    # Marcar chef como disponible y limpiar current_order_id
+                    availability_db.update_item(
+                        {'staff_id': assigned_chef},
+                        {
+                            'status': 'available',
+                            'current_order_id': None,
+                            'orders_completed': orders_completed,
+                            'updated_at': timestamp
+                        }
+                    )
+                    logger.info(f"✅ Chef {assigned_chef} marked as available after completing order {order_id}")
+                else:
+                    logger.warning(f"Chef {assigned_chef} not found in availability table")
+            except Exception as e:
+                logger.error(f"Error marking chef as available: {str(e)}")
+                # No fallar el proceso si esto falla
         
         workflow = workflow_db.get_item({'order_id': order_id})
         if workflow:
@@ -179,33 +212,10 @@ def complete_cooking(event, context):
         )
         
         # ============================================
-        # ENVIAR A COLA DE DRIVERS
+        # NOTA: Drivers son asignados MANUALMENTE
+        # No se envía a cola SQS, el driver debe recoger el pedido manualmente
+        # cuando esté listo (usando POST /driver/pickup/{order_id})
         # ============================================
-        if DRIVER_QUEUE_URL:
-            message_body = json.dumps({
-                'order_id': order_id,
-                'tenant_id': tenant_id,
-                'timestamp': timestamp
-            })
-            
-            response = sqs.send_message(
-                QueueUrl=DRIVER_QUEUE_URL,
-                MessageBody=message_body
-            )
-            
-            message_id = response.get('MessageId')
-            logger.info(f"✅ Order {order_id} sent to driver queue. MessageId: {message_id}")
-            
-            EventBridgeService.put_event(
-                source='workflow.service',
-                detail_type='OrderSentToDriverQueue',
-                detail={
-                    'order_id': order_id,
-                    'message_id': message_id,
-                    'queue': 'driver_assignment'
-                },
-                tenant_id=tenant_id
-            )
         
         logger.info(f"Order {order_id} ready and queued for driver")
         

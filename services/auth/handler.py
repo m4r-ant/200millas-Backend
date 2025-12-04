@@ -66,13 +66,21 @@ def login(event, context):
     logger.info("Login attempt")
     
     body = parse_body(event)
-    email = body.get('email', '').strip()
+    logger.info(f"Parsed body keys: {list(body.keys()) if body else 'None'}")
+    
+    email = body.get('email', '')
+    if email:
+        email = email.strip().lower()
     password = body.get('password', '')
     
+    logger.info(f"Email received: '{email}' (length: {len(email)})")
+    
     if not email or not password:
+        logger.warning(f"Missing credentials - email: {bool(email)}, password: {bool(password)}")
         raise ValidationError("Email y password son requeridos")
     
     if '@' not in email:
+        logger.warning(f"Invalid email format: '{email}'")
         raise ValidationError("Email inválido")
     
     user = users_db.get_item({'email': email})
@@ -87,6 +95,39 @@ def login(event, context):
         user_type=user['user_type'],
         email=email
     )
+    
+    # ============================================
+    # MARCAR CHEF COMO DISPONIBLE AL HACER LOGIN
+    # ============================================
+    if user['user_type'] in ['staff', 'chef']:
+        try:
+            from shared.dynamodb import DynamoDBService
+            availability_db = DynamoDBService(os.environ.get('STAFF_AVAILABILITY_TABLE', 'dev-StaffAvailability'))
+            staff_id = email
+            timestamp = current_timestamp()
+            
+            # Obtener registro actual si existe
+            current_record = availability_db.get_item({'staff_id': staff_id})
+            
+            # Marcar como disponible al hacer login
+            availability_data = {
+                'staff_id': staff_id,
+                'staff_type': 'chef',
+                'email': email,
+                'user_id': user_id,
+                'tenant_id': os.environ.get('TENANT_ID', '200millas'),
+                'status': 'available',
+                'updated_at': timestamp,
+                'expires_at': timestamp + 86400,  # TTL 24 horas
+                'orders_completed': current_record.get('orders_completed', 0) if current_record else 0,
+                'current_order_id': None  # Limpiar cualquier pedido anterior
+            }
+            
+            availability_db.put_item(availability_data)
+            logger.info(f"✅ Chef {email} marked as available on login")
+        except Exception as e:
+            logger.warning(f"Could not mark chef as available on login: {str(e)}")
+            # No fallar el login si esto falla
     
     logger.info(f"Login successful for {email}")
     

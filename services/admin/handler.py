@@ -39,10 +39,20 @@ def list_chefs(event, context):
     user_type = get_user_type(event)
     user_id = get_user_id(event)
     
-    if user_type != 'admin':
-        logger.warning(f"Unauthorized list chefs attempt by {user_type} {user_id}")
+    logger.info(f"List chefs request - user_type: '{user_type}', user_id: '{user_id}'")
+    logger.info(f"Event keys: {list(event.keys())}")
+    if 'requestContext' in event:
+        logger.info(f"RequestContext keys: {list(event['requestContext'].keys())}")
+        if 'authorizer' in event['requestContext']:
+            logger.info(f"Authorizer keys: {list(event['requestContext']['authorizer'].keys())}")
+            if 'context' in event['requestContext']['authorizer']:
+                logger.info(f"Authorizer context: {event['requestContext']['authorizer']['context']}")
+    
+    # Permitir 'admin' o 'staff' como admin (flexibilidad)
+    if user_type not in ['admin']:
+        logger.warning(f"Unauthorized list chefs attempt by user_type='{user_type}' user_id='{user_id}'")
         raise UnauthorizedError(
-            "Acceso denegado. Solo administradores pueden ver la lista de chefs."
+            f"Acceso denegado. Solo administradores pueden ver la lista de chefs. (user_type recibido: '{user_type}')"
         )
     
     logger.info(f"List chefs access granted to admin {user_id}")
@@ -93,10 +103,12 @@ def list_drivers(event, context):
     user_type = get_user_type(event)
     user_id = get_user_id(event)
     
-    if user_type != 'admin':
-        logger.warning(f"Unauthorized list drivers attempt by {user_type} {user_id}")
+    logger.info(f"List drivers request - user_type: '{user_type}', user_id: '{user_id}'")
+    
+    if user_type not in ['admin']:
+        logger.warning(f"Unauthorized list drivers attempt by user_type='{user_type}' user_id='{user_id}'")
         raise UnauthorizedError(
-            "Acceso denegado. Solo administradores pueden ver la lista de drivers."
+            f"Acceso denegado. Solo administradores pueden ver la lista de drivers. (user_type recibido: '{user_type}')"
         )
     
     logger.info(f"List drivers access granted to admin {user_id}")
@@ -148,10 +160,12 @@ def list_all_users(event, context):
     user_type = get_user_type(event)
     user_id = get_user_id(event)
     
-    if user_type != 'admin':
-        logger.warning(f"Unauthorized list users attempt by {user_type} {user_id}")
+    logger.info(f"List all users request - user_type: '{user_type}', user_id: '{user_id}'")
+    
+    if user_type not in ['admin']:
+        logger.warning(f"Unauthorized list users attempt by user_type='{user_type}' user_id='{user_id}'")
         raise UnauthorizedError(
-            "Acceso denegado. Solo administradores pueden ver la lista de usuarios."
+            f"Acceso denegado. Solo administradores pueden ver la lista de usuarios. (user_type recibido: '{user_type}')"
         )
     
     logger.info(f"List users access granted to admin {user_id}")

@@ -228,12 +228,21 @@ def get_user_type(event):
     try:
         logger.info("Extracting user_type from event")
         
-        # ✅ Intentar en requestContext.authorizer (API Gateway REST)
+        # ✅ Intentar en requestContext.authorizer.context (API Gateway REST)
         request_context = event.get('requestContext', {})
         if request_context:
             authorizer = request_context.get('authorizer', {})
-            user_type = authorizer.get('user_type')
             
+            # Intentar en context primero (donde se guarda normalmente)
+            if 'context' in authorizer:
+                user_type = authorizer['context'].get('user_type')
+                if user_type:
+                    result = str(user_type).strip().lower()
+                    logger.info(f"✓ user_type found in authorizer.context: {result}")
+                    return result
+            
+            # Intentar directamente en authorizer
+            user_type = authorizer.get('user_type')
             if user_type:
                 result = str(user_type).strip().lower()
                 logger.info(f"✓ user_type found in authorizer: {result}")

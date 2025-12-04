@@ -397,13 +397,19 @@ functions:
     handler: services/workflow/step_functions_handlers.assign_cook
     timeout: 30
     environment:
-      CHEF_ASSIGNMENT_QUEUE: !GetAtt ChefAssignmentQueue.QueueUrl
+      CHEF_ASSIGNMENT_QUEUE:
+        'Fn::GetAtt':
+          - ChefAssignmentQueue
+          - QueueUrl
 
   completeCooking:
     handler: services/workflow/step_functions_handlers.complete_cooking
     timeout: 30
     environment:
-      DRIVER_ASSIGNMENT_QUEUE: !GetAtt DriverAssignmentQueue.QueueUrl
+      DRIVER_ASSIGNMENT_QUEUE:
+        'Fn::GetAtt':
+          - DriverAssignmentQueue
+          - QueueUrl
 
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
@@ -420,7 +426,6 @@ functions:
       - sqs:
           arn: !GetAtt ChefAssignmentQueue.Arn
           batchSize: 1
-          maximumBatchingWindowInSeconds: 0
 
   processDriverQueue:
     handler: services/queue/driver_processor.process_driver_assignments
@@ -429,7 +434,6 @@ functions:
       - sqs:
           arn: !GetAtt DriverAssignmentQueue.Arn
           batchSize: 1
-          maximumBatchingWindowInSeconds: 0
 
   # ============================================================================
   # CHEF AVAILABILITY - NUEVOS
@@ -1038,12 +1042,12 @@ outputs:
 
   ChefQueueUrl:
     Description: URL de la cola de asignación de chefs
-    Value: !Ref ChefAssignmentQueue
+    Value: !GetAtt ChefAssignmentQueue.QueueUrl
     Export:
       Name: ${self:service}-${sls:stage}-ChefQueueUrl
 
   DriverQueueUrl:
     Description: URL de la cola de asignación de drivers
-    Value: !Ref DriverAssignmentQueue
+    Value: !GetAtt DriverAssignmentQueue.QueueUrl
     Export:
-      Name: ${self
+      Name: ${self:service}-${sls:stage}-DriverQueueUrl
