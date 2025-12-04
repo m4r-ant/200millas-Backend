@@ -23,6 +23,7 @@ provider:
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
     SNS_TOPIC_ARN: arn:aws:sns:us-east-1:722204368591:200millas-emails
+    STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
 
 custom:
   pythonRequirements:
@@ -242,7 +243,6 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
-  # ✅ NUEVO: Endpoint para actualizar estado de pedido (Chef/Admin)
   updateOrderStatus:
     handler: services/orders/handler.update_order_status
     events:
@@ -340,7 +340,7 @@ functions:
             type: token
 
   # ============================================================================
-  # ADMIN - Gestión de Usuarios (NUEVO)
+  # ADMIN - Gestión de Usuarios
   # ============================================================================
 
   listChefs:
@@ -396,14 +396,104 @@ functions:
   assignCook:
     handler: services/workflow/step_functions_handlers.assign_cook
     timeout: 30
+    environment:
+      CHEF_ASSIGNMENT_QUEUE: !GetAtt ChefAssignmentQueue.QueueUrl
 
   completeCooking:
     handler: services/workflow/step_functions_handlers.complete_cooking
     timeout: 30
+    environment:
+      DRIVER_ASSIGNMENT_QUEUE: !GetAtt DriverAssignmentQueue.QueueUrl
 
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
     timeout: 30
+
+  # ============================================================================
+  # SQS PROCESSORS - NUEVOS
+  # ============================================================================
+
+  processChefQueue:
+    handler: services/queue/chef_processor.process_chef_assignments
+    timeout: 60
+    events:
+      - sqs:
+          arn: !GetAtt ChefAssignmentQueue.Arn
+          batchSize: 1
+          maximumBatchingWindowInSeconds: 0
+
+  processDriverQueue:
+    handler: services/queue/driver_processor.process_driver_assignments
+    timeout: 60
+    events:
+      - sqs:
+          arn: !GetAtt DriverAssignmentQueue.Arn
+          batchSize: 1
+          maximumBatchingWindowInSeconds: 0
+
+  # ============================================================================
+  # CHEF AVAILABILITY - NUEVOS
+  # ============================================================================
+
+  reportChefAvailability:
+    handler: services/queue/chef_availability.report_availability
+    events:
+      - http:
+          path: /chef/availability
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getAvailableChefs:
+    handler: services/queue/chef_availability.get_available_chefs
+    events:
+      - http:
+          path: /chef/available
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # DRIVER AVAILABILITY - NUEVOS
+  # ============================================================================
+
+  reportDriverAvailability:
+    handler: services/queue/driver_availability.report_availability
+    events:
+      - http:
+          path: /driver/availability
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getAvailableDriversList:
+    handler: services/queue/driver_availability.get_available_drivers
+    events:
+      - http:
+          path: /driver/available-list
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   # ============================================================================
   # WEBSOCKET - Notificaciones en Tiempo Real
@@ -588,6 +678,72 @@ resources:
         BillingMode: PAY_PER_REQUEST
 
     # ========================================
+    # STAFF AVAILABILITY TABLE - NUEVO
+    # ========================================
+
+    StaffAvailabilityTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.STAFF_AVAILABILITY_TABLE}
+        AttributeDefinitions:
+          - AttributeName: staff_id
+            AttributeType: S
+          - AttributeName: staff_type
+            AttributeType: S
+        KeySchema:
+          - AttributeName: staff_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: staff-type-index
+            KeySchema:
+              - AttributeName: staff_type
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: expires_at
+          Enabled: true
+
+    # ========================================
+    # SQS QUEUES - NUEVO
+    # ========================================
+
+    ChefAssignmentQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-chef-queue
+        VisibilityTimeout: 120
+        MessageRetentionPeriod: 3600
+        ReceiveMessageWaitTimeSeconds: 20
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt ChefAssignmentDLQ.Arn
+          maxReceiveCount: 3
+
+    ChefAssignmentDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-chef-dlq
+        MessageRetentionPeriod: 86400
+
+    DriverAssignmentQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-driver-queue
+        VisibilityTimeout: 120
+        MessageRetentionPeriod: 3600
+        ReceiveMessageWaitTimeSeconds: 20
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt DriverAssignmentDLQ.Arn
+          maxReceiveCount: 3
+
+    DriverAssignmentDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-driver-dlq
+        MessageRetentionPeriod: 86400
+
+    # ========================================
     # S3 Bucket para Imágenes del Menú
     # ========================================
 
@@ -646,6 +802,7 @@ resources:
             - orders.service
             - workflow.service
             - driver.service
+            - queue.service
           detail-type:
             - OrderCreated
             - OrderUpdated
@@ -658,6 +815,8 @@ resources:
             - OrderDelivered
             - OrderPickupCanceled
             - OrderFailed
+            - OrderAssignedToChef
+            - OrderAssignedToDriver
         State: ENABLED
         Description: Captura todos los eventos relacionados con pedidos y workflow
 
@@ -672,7 +831,7 @@ resources:
         RoleArn: arn:aws:iam::722204368591:role/LabRole
         DefinitionString: !Sub |
           {
-            "Comment": "Workflow automatizado hasta ready - Driver continúa manualmente",
+            "Comment": "Workflow automatizado con SQS para asignación de chefs y drivers",
             "StartAt": "ConfirmOrder",
             "States": {
               "ConfirmOrder": {
@@ -776,6 +935,7 @@ resources:
             - orders.service
             - driver.service
             - workflow.service
+            - queue.service
           detail-type:
             - OrderCreated
             - OrderStatusChanged
@@ -786,6 +946,8 @@ resources:
             - OrderInDelivery
             - OrderDelivered
             - OrderPickupCanceled
+            - OrderAssignedToChef
+            - OrderAssignedToDriver
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
@@ -813,6 +975,7 @@ resources:
             - orders.service
             - driver.service
             - workflow.service
+            - queue.service
           detail-type:
             - OrderCreated
             - OrderStatusChanged
@@ -872,3 +1035,15 @@ outputs:
     Value: !Sub "wss://${WebsocketApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
     Export:
       Name: ${self:service}-${sls:stage}-WebSocketEndpoint
+
+  ChefQueueUrl:
+    Description: URL de la cola de asignación de chefs
+    Value: !Ref ChefAssignmentQueue
+    Export:
+      Name: ${self:service}-${sls:stage}-ChefQueueUrl
+
+  DriverQueueUrl:
+    Description: URL de la cola de asignación de drivers
+    Value: !Ref DriverAssignmentQueue
+    Export:
+      Name: ${self
