@@ -13,6 +13,7 @@ provider:
     WORKFLOW_TABLE: ${sls:stage}-Workflow
     MENU_TABLE: ${sls:stage}-Menu
     USERS_TABLE: ${sls:stage}-Users
+    ADDRESSES_TABLE: ${sls:stage}-Addresses
     TENANT_ID: 200millas
     MENU_IMAGES_BUCKET: ${self:service}-${sls:stage}-menu-images
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
@@ -104,6 +105,66 @@ functions:
       - http:
           path: /auth/password
           method: patch
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # ADDRESSES - Gestión de Direcciones de Entrega
+  # ============================================================================
+
+  getAddresses:
+    handler: services/addresses/handler.get_addresses
+    events:
+      - http:
+          path: /addresses
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  createAddress:
+    handler: services/addresses/handler.create_address
+    events:
+      - http:
+          path: /addresses
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  updateAddress:
+    handler: services/addresses/handler.update_address
+    events:
+      - http:
+          path: /addresses/{address_id}
+          method: patch
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  deleteAddress:
+    handler: services/addresses/handler.delete_address
+    events:
+      - http:
+          path: /addresses/{address_id}
+          method: delete
           cors: true
           integration: lambda
           authorizer:
@@ -767,6 +828,29 @@ resources:
         KeySchema:
           - AttributeName: email
             KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    AddressesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ADDRESSES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: address_id
+            AttributeType: S
+          - AttributeName: user_email
+            AttributeType: S
+          - AttributeName: tenant_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: address_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-addresses-index
+            KeySchema:
+              - AttributeName: user_email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
 
     WebSocketConnectionsTable:
