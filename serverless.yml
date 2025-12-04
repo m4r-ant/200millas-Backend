@@ -4,10 +4,11 @@ service: millas-backend
 provider:
   name: aws
   runtime: python3.12
-  memorySize: 1024
+  memorySize: 256
   timeout: 29
+  logRetentionInDays: 1
   iam:
-    role: arn:aws:iam::784426622446:role/LabRole
+    role: arn:aws:iam::${aws:accountId}:role/LabRole
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -19,14 +20,15 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
-    AWS_ACCOUNT_ID: 784426622446
+    AWS_ACCOUNT_ID: ${aws:accountId}
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:784426622446:200millas-emails
+    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:200millas-emails"
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
 
 custom:
+  accountId: ${aws:accountId}
   pythonRequirements:
     dockerizePip: true
     layer: false
@@ -971,10 +973,10 @@ resources:
       Properties:
         BucketName: ${self:provider.environment.MENU_IMAGES_BUCKET}
         PublicAccessBlockConfiguration:
-          BlockPublicAcls: false
-          BlockPublicPolicy: false
-          IgnorePublicAcls: false
-          RestrictPublicBuckets: false
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
         CorsConfiguration:
           CorsRules:
             - AllowedHeaders:
@@ -987,21 +989,6 @@ resources:
               AllowedOrigins:
                 - "*"
               MaxAge: 3000
-
-    MenuImagesBucketPolicy:
-      Type: AWS::S3::BucketPolicy
-      Properties:
-        Bucket: !Ref MenuImagesBucket
-        PolicyDocument:
-          Statement:
-            - Sid: PublicReadGetObject
-              Effect: Allow
-              Principal: "*"
-              Action:
-                - s3:GetObject
-              Resource: !Sub 
-                - "arn:aws:s3:::${BucketName}/*"
-                - BucketName: !Ref MenuImagesBucket
 
     # ========================================
     # EventBridge - Bus de Eventos
@@ -1050,7 +1037,7 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
-        RoleArn: arn:aws:iam::784426622446:role/LabRole
+        RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
         DefinitionString: !Sub |
           {
             "Comment": "Workflow automatizado: Chef cocina y empaqueta, luego driver entrega",
@@ -1204,7 +1191,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
-            RoleArn: arn:aws:iam::784426622446:role/LabRole
+            RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1246,7 +1233,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
-            RoleArn: arn:aws:iam::784426622446:role/LabRole
+            RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:
