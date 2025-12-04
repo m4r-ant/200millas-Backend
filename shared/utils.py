@@ -227,6 +227,18 @@ def get_user_type(event):
     """
     try:
         logger.info("Extracting user_type from event")
+        logger.info(f"Event keys: {list(event.keys())}")
+        
+        # ✅ Intentar en enhancedAuthContext (API Gateway HTTP API v2)
+        enhanced_auth = event.get('enhancedAuthContext', {})
+        if enhanced_auth:
+            logger.info(f"enhancedAuthContext keys: {list(enhanced_auth.keys())}")
+            logger.info(f"enhancedAuthContext content: {enhanced_auth}")
+            user_type = enhanced_auth.get('user_type')
+            if user_type:
+                result = str(user_type).strip().lower()
+                logger.info(f"✓ user_type found in enhancedAuthContext: {result}")
+                return result
         
         # ✅ Intentar en requestContext.authorizer.context (API Gateway REST)
         request_context = event.get('requestContext', {})
@@ -255,12 +267,79 @@ def get_user_type(event):
             logger.info(f"✓ user_type found in event: {result}")
             return result
         
+        # ✅ Si no se encuentra, intentar obtener del usuario en la base de datos usando principalId o email
+        principal_id = event.get('principalId')
+        user_email_from_auth = None
+        
+        # Intentar obtener email del enhancedAuthContext
+        if enhanced_auth:
+            user_email_from_auth = enhanced_auth.get('email')
+        
+        # Intentar obtener email del requestContext
+        if not user_email_from_auth and request_context:
+            authorizer = request_context.get('authorizer', {})
+            if 'context' in authorizer:
+                user_email_from_auth = authorizer['context'].get('email')
+        
+        if principal_id or user_email_from_auth:
+            try:
+                from shared.dynamodb import DynamoDBService
+                users_db = DynamoDBService(os.environ.get('USERS_TABLE'))
+                
+                # Buscar por email primero (más confiable)
+                if user_email_from_auth:
+                    user = users_db.get_item({'email': user_email_from_auth})
+                    if user:
+                        user_type = user.get('user_type')
+                        if user_type:
+                            result = str(user_type).strip().lower()
+                            logger.info(f"✓ user_type found from DB lookup by email: {result}")
+                            return result
+                
+                # Si no encontramos por email, buscar por principalId (user_id)
+                if principal_id:
+                    # El principalId es el user_id (parte antes del @ del email)
+                    # Intentar construir el email: principalId@200millas.com
+                    tenant_id = os.environ.get('TENANT_ID', '200millas')
+                    possible_emails = [
+                        f"{principal_id}@{tenant_id}.com",
+                        f"{principal_id}@200millas.com"
+                    ]
+                    
+                    for possible_email in possible_emails:
+                        user = users_db.get_item({'email': possible_email})
+                        if user:
+                            user_type = user.get('user_type')
+                            if user_type:
+                                result = str(user_type).strip().lower()
+                                logger.info(f"✓ user_type found from DB lookup by constructed email {possible_email}: {result}")
+                                return result
+                    
+                    # Si no funciona, buscar en todos los usuarios
+                    all_users = users_db.scan_items()
+                    for user in all_users:
+                        user_email = user.get('email', '')
+                        if user_email:
+                            user_id_from_email = user_email.split('@')[0]
+                            if user_id_from_email == principal_id:
+                                user_type = user.get('user_type')
+                                if user_type:
+                                    result = str(user_type).strip().lower()
+                                    logger.info(f"✓ user_type found from DB lookup by principalId: {result}")
+                                    return result
+            except Exception as e:
+                logger.warning(f"Could not lookup user_type from DB: {str(e)}")
+                import traceback
+                logger.warning(traceback.format_exc())
+        
         # ✅ Default a customer si no se especifica
         logger.warning("user_type not found, defaulting to 'customer'")
         return 'customer'
         
     except Exception as e:
         logger.error(f"Error getting user_type: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return 'customer'
 
 def parse_body(event):
