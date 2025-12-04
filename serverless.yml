@@ -839,8 +839,6 @@ resources:
             AttributeType: S
           - AttributeName: user_email
             AttributeType: S
-          - AttributeName: tenant_id
-            AttributeType: S
         KeySchema:
           - AttributeName: address_id
             KeyType: HASH
