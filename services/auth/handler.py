@@ -3,7 +3,7 @@ from shared.utils import (
     response, success_response, error_response, error_handler, 
     parse_body, current_timestamp, get_user_email, get_user_id
 )
-from shared.security import create_access_token, verify_token, hash_password
+from shared.security import create_access_token, verify_token, hash_password, verify_password
 from shared.errors import UnauthorizedError, ValidationError, ConflictError, NotFoundError
 from shared.logger import get_logger
 from shared.dynamodb import DynamoDBService
@@ -84,8 +84,13 @@ def login(event, context):
         raise ValidationError("Email inválido")
     
     user = users_db.get_item({'email': email})
-    if not user or not _verify_password(password, user['password']):
-        logger.warning(f"Login failed for {email}")
+    if not user:
+        logger.warning(f"User not found: {email}")
+        raise UnauthorizedError("Email o password incorrecto")
+    
+    # Verificar contraseña usando la función correcta
+    if not verify_password(password, user['password']):
+        logger.warning(f"Invalid password for {email}")
         raise UnauthorizedError("Email o password incorrecto")
     
     user_id = email.split('@')[0]
@@ -213,9 +218,7 @@ def authorize(event, context):
         logger.error(traceback.format_exc())
         raise Exception('Unauthorized')
 
-def _verify_password(password, hashed):
-    from shared.security import hash_password
-    return hash_password(password) == hashed
+# Función eliminada - usar verify_password de shared/security.py directamente
 
 
 # ============================================================================
@@ -364,7 +367,7 @@ def change_password(event, context):
         raise NotFoundError("Usuario no encontrado")
     
     # Verificar contraseña actual
-    if not _verify_password(current_password, user['password']):
+    if not verify_password(current_password, user['password']):
         logger.warning(f"Wrong current password for {user_email}")
         raise UnauthorizedError("Contraseña actual incorrecta")
     
