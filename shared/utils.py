@@ -187,11 +187,20 @@ def get_user_email(event):
     try:
         logger.info("Extracting email from event")
         
-        # ✅ OPCIÓN 1: requestContext.authorizer.email (API Gateway REST moderno)
+        # ✅ OPCIÓN 1: requestContext.authorizer.context.email (API Gateway REST con context)
         request_context = event.get('requestContext', {})
         if isinstance(request_context, dict):
             authorizer = request_context.get('authorizer', {})
             if isinstance(authorizer, dict):
+                # Primero intentar en context (donde el autorizador lo guarda)
+                if 'context' in authorizer and isinstance(authorizer['context'], dict):
+                    email = authorizer['context'].get('email')
+                    if email:
+                        result = str(email).strip()
+                        logger.info(f"✓ Email found in requestContext.authorizer.context.email: {result}")
+                        return result
+                
+                # Luego intentar directamente en authorizer (fallback)
                 email = authorizer.get('email')
                 if email:
                     result = str(email).strip()
@@ -205,15 +214,21 @@ def get_user_email(event):
             logger.info(f"✓ Email found in event.email: {result}")
             return result
         
-        # ✅ OPCIÓN 3: Si hay user_id, tratar de extraer email del token (como fallback)
+        # ✅ OPCIÓN 3: Si hay user_id, construir email como fallback
         user_id = get_user_id(event)
         if user_id:
-            # El user_id suele ser la parte antes del @ del email
-            # Si el user_id es un formato "nombre", devolver None para que se use user_id
-            logger.warning(f"Email not found, returning None. Use user_id instead: {user_id}")
-            return None
+            # Si el user_id parece ser un email completo, usarlo
+            if '@' in str(user_id):
+                result = str(user_id).strip()
+                logger.info(f"✓ Email constructed from user_id (already email): {result}")
+                return result
+            # Si el user_id es solo la parte antes del @, construir el email
+            # Intentar con el dominio común
+            constructed_email = f"{user_id}@200millas.com"
+            logger.warning(f"Email not found in event, trying constructed email: {constructed_email}")
+            return constructed_email
         
-        logger.warning("Email not found in event")
+        logger.warning("Email not found in event and no user_id available")
         return None
         
     except Exception as e:
