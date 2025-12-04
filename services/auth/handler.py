@@ -1,4 +1,5 @@
 import os
+import json
 from shared.utils import (
     response, success_response, error_response, error_handler, 
     parse_body, current_timestamp, get_user_email, get_user_id
@@ -233,18 +234,41 @@ def get_profile(event, context):
     GET /auth/profile
     """
     logger.info("Getting user profile")
+    logger.info(f"Event keys: {list(event.keys())}")
     
     user_email = get_user_email(event)
     user_id = get_user_id(event)
     
+    logger.info(f"Extracted user_email: {user_email}, user_id: {user_id}")
+    
     if not user_email:
-        raise ValidationError("No se pudo identificar al usuario")
+        # Intentar obtener email del user_id como fallback
+        if user_id:
+            logger.warning(f"Email not found, trying to construct from user_id: {user_id}")
+            # Si user_id es solo la parte antes del @, construir email
+            if '@' not in str(user_id):
+                possible_email = f"{user_id}@200millas.com"
+                logger.info(f"Trying constructed email: {possible_email}")
+                user = users_db.get_item({'email': possible_email})
+                if user:
+                    logger.info(f"Found user with constructed email: {possible_email}")
+                    user_email = possible_email
+                else:
+                    raise ValidationError("No se pudo identificar al usuario")
+            else:
+                # user_id ya es un email
+                user_email = user_id
+                logger.info(f"Using user_id as email: {user_email}")
+        else:
+            raise ValidationError("No se pudo identificar al usuario")
     
     logger.info(f"User {user_id} ({user_email}) requesting profile")
     
     user = users_db.get_item({'email': user_email})
     if not user:
-        raise NotFoundError("Usuario no encontrado")
+        logger.error(f"User not found in database for email: {user_email}")
+        logger.error(f"Available event context: {json.dumps(event.get('requestContext', {}).get('authorizer', {}), default=str)}")
+        raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
     
     # Construir perfil (sin password)
     profile = {
