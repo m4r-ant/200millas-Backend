@@ -186,19 +186,37 @@ def get_user_email(event):
     """
     try:
         logger.info("Extracting email from event")
+        logger.info(f"Event keys: {list(event.keys())[:20]}")
         
         # ✅ OPCIÓN 1: requestContext.authorizer.context.email (API Gateway REST con context)
         request_context = event.get('requestContext', {})
         if isinstance(request_context, dict):
+            logger.info(f"requestContext type: {type(request_context)}, keys: {list(request_context.keys())}")
             authorizer = request_context.get('authorizer', {})
             if isinstance(authorizer, dict):
+                logger.info(f"authorizer type: {type(authorizer)}, keys: {list(authorizer.keys())}")
                 # Primero intentar en context (donde el autorizador lo guarda)
-                if 'context' in authorizer and isinstance(authorizer['context'], dict):
-                    email = authorizer['context'].get('email')
-                    if email:
-                        result = str(email).strip()
-                        logger.info(f"✓ Email found in requestContext.authorizer.context.email: {result}")
-                        return result
+                if 'context' in authorizer:
+                    context = authorizer['context']
+                    logger.info(f"context type: {type(context)}")
+                    if isinstance(context, dict):
+                        email = context.get('email')
+                        if email:
+                            result = str(email).strip()
+                            logger.info(f"✓ Email found in requestContext.authorizer.context.email: {result}")
+                            return result
+                    elif isinstance(context, str):
+                        # A veces context es un string JSON, intentar parsearlo
+                        try:
+                            import json
+                            context_dict = json.loads(context)
+                            email = context_dict.get('email')
+                            if email:
+                                result = str(email).strip()
+                                logger.info(f"✓ Email found in requestContext.authorizer.context (parsed JSON).email: {result}")
+                                return result
+                        except:
+                            pass
                 
                 # Luego intentar directamente en authorizer (fallback)
                 email = authorizer.get('email')
