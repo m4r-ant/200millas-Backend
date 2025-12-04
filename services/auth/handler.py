@@ -1,10 +1,10 @@
 import os
 from shared.utils import (
     response, success_response, error_response, error_handler, 
-    parse_body, current_timestamp
+    parse_body, current_timestamp, get_user_email, get_user_id
 )
 from shared.security import create_access_token, verify_token, hash_password
-from shared.errors import UnauthorizedError, ValidationError, ConflictError
+from shared.errors import UnauthorizedError, ValidationError, ConflictError, NotFoundError
 from shared.logger import get_logger
 from shared.dynamodb import DynamoDBService
 
@@ -215,3 +215,169 @@ def authorize(event, context):
 def _verify_password(password, hashed):
     from shared.security import hash_password
     return hash_password(password) == hashed
+
+
+# ============================================================================
+# FUNCIÓN 4: GET PROFILE - Obtener perfil del usuario
+# ============================================================================
+
+@error_handler
+def get_profile(event, context):
+    """
+    Obtiene el perfil del usuario autenticado
+    
+    GET /auth/profile
+    """
+    logger.info("Getting user profile")
+    
+    user_email = get_user_email(event)
+    user_id = get_user_id(event)
+    
+    if not user_email:
+        raise ValidationError("No se pudo identificar al usuario")
+    
+    logger.info(f"User {user_id} ({user_email}) requesting profile")
+    
+    user = users_db.get_item({'email': user_email})
+    if not user:
+        raise NotFoundError("Usuario no encontrado")
+    
+    # Construir perfil (sin password)
+    profile = {
+        'email': user.get('email'),
+        'name': user.get('name'),
+        'user_type': user.get('user_type'),
+        'created_at': user.get('created_at'),
+        'phone': user.get('phone'),  # Si existe
+        'address': user.get('address'),  # Si existe
+        'preferences': user.get('preferences', {})  # Si existe
+    }
+    
+    logger.info(f"Profile retrieved for {user_email}")
+    
+    return success_response(profile)
+
+
+# ============================================================================
+# FUNCIÓN 5: UPDATE PROFILE - Actualizar perfil
+# ============================================================================
+
+@error_handler
+def update_profile(event, context):
+    """
+    Actualiza el perfil del usuario autenticado
+    
+    PATCH /auth/profile
+    Body: { "name": "Nuevo nombre", "phone": "123456789", "address": "...", "preferences": {...} }
+    """
+    logger.info("Updating user profile")
+    
+    user_email = get_user_email(event)
+    body = parse_body(event)
+    
+    if not user_email:
+        raise ValidationError("No se pudo identificar al usuario")
+    
+    logger.info(f"User {user_email} updating profile")
+    
+    user = users_db.get_item({'email': user_email})
+    if not user:
+        raise NotFoundError("Usuario no encontrado")
+    
+    # Campos permitidos para actualizar
+    allowed_fields = ['name', 'phone', 'address', 'preferences']
+    update_data = {}
+    
+    for field in allowed_fields:
+        if field in body:
+            update_data[field] = body[field]
+    
+    if not update_data:
+        raise ValidationError("No hay campos válidos para actualizar. Campos permitidos: name, phone, address, preferences")
+    
+    # Validar que preferences sea un dict si se proporciona
+    if 'preferences' in update_data and not isinstance(update_data['preferences'], dict):
+        raise ValidationError("preferences debe ser un objeto JSON")
+    
+    update_data['updated_at'] = current_timestamp()
+    
+    # Actualizar en base de datos
+    users_db.update_item({'email': user_email}, update_data)
+    
+    logger.info(f"Profile updated for {user_email}: {list(update_data.keys())}")
+    
+    # Obtener usuario actualizado
+    updated_user = users_db.get_item({'email': user_email})
+    
+    profile = {
+        'email': updated_user.get('email'),
+        'name': updated_user.get('name'),
+        'user_type': updated_user.get('user_type'),
+        'phone': updated_user.get('phone'),
+        'address': updated_user.get('address'),
+        'preferences': updated_user.get('preferences', {})
+    }
+    
+    return success_response({
+        'message': 'Perfil actualizado correctamente',
+        'profile': profile
+    })
+
+
+# ============================================================================
+# FUNCIÓN 6: CHANGE PASSWORD - Cambiar contraseña
+# ============================================================================
+
+@error_handler
+def change_password(event, context):
+    """
+    Cambia la contraseña del usuario autenticado
+    
+    PATCH /auth/password
+    Body: { "current_password": "...", "new_password": "..." }
+    """
+    logger.info("Changing user password")
+    
+    user_email = get_user_email(event)
+    body = parse_body(event)
+    
+    if not user_email:
+        raise ValidationError("No se pudo identificar al usuario")
+    
+    current_password = body.get('current_password', '').strip()
+    new_password = body.get('new_password', '').strip()
+    
+    if not current_password or not new_password:
+        raise ValidationError("current_password y new_password son requeridos")
+    
+    if len(new_password) < 6:
+        raise ValidationError("La nueva contraseña debe tener al menos 6 caracteres")
+    
+    if current_password == new_password:
+        raise ValidationError("La nueva contraseña debe ser diferente a la actual")
+    
+    logger.info(f"User {user_email} changing password")
+    
+    user = users_db.get_item({'email': user_email})
+    if not user:
+        raise NotFoundError("Usuario no encontrado")
+    
+    # Verificar contraseña actual
+    if not _verify_password(current_password, user['password']):
+        logger.warning(f"Wrong current password for {user_email}")
+        raise UnauthorizedError("Contraseña actual incorrecta")
+    
+    # Actualizar contraseña
+    users_db.update_item(
+        {'email': user_email},
+        {
+            'password': hash_password(new_password),
+            'updated_at': current_timestamp()
+        }
+    )
+    
+    logger.info(f"Password changed successfully for {user_email}")
+    
+    return success_response({
+        'message': 'Contraseña actualizada correctamente'
+    })

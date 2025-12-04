@@ -70,6 +70,48 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  getProfile:
+    handler: services/auth/handler.get_profile
+    events:
+      - http:
+          path: /auth/profile
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  updateProfile:
+    handler: services/auth/handler.update_profile
+    events:
+      - http:
+          path: /auth/profile
+          method: patch
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  changePassword:
+    handler: services/auth/handler.change_password
+    events:
+      - http:
+          path: /auth/password
+          method: patch
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
   # ============================================================================
   # DRIVER - Endpoints para Repartidores
   # ============================================================================
@@ -234,6 +276,34 @@ functions:
     events:
       - http:
           path: /orders/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getCurrentOrder:
+    handler: services/orders/handler.get_current_order
+    events:
+      - http:
+          path: /orders/current
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getOrderStatus:
+    handler: services/orders/handler.get_order_status
+    events:
+      - http:
+          path: /orders/{order_id}/status
           method: get
           cors: true
           integration: lambda
@@ -588,6 +658,9 @@ functions:
     environment:
       WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
       WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
+      WEBSOCKET_API_ID: !GetAtt WebsocketsApi.ApiId
+      AWS_REGION: ${aws:region}
+      SERVERLESS_STAGE: ${sls:stage}
 
   # ============================================================================
   # EMAIL - Notificaciones por Email
@@ -1135,7 +1208,7 @@ outputs:
 
   WebSocketApiEndpoint:
     Description: WebSocket API Endpoint
-    Value: !Sub "wss://${WebsocketApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
+    Value: !Sub "wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${sls:stage}"
     Export:
       Name: ${self:service}-${sls:stage}-WebSocketEndpoint
 

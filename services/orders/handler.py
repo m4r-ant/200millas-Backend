@@ -492,6 +492,184 @@ def update_order_status(event, context):
 
 
 # ============================================================================
+# FUNCIÓN 5: GET CURRENT ORDER - Pedido activo del cliente
+# ============================================================================
+
+@error_handler
+def get_current_order(event, context):
+    """
+    Obtiene el pedido en curso (más reciente que no esté 'delivered' o 'failed')
+    del cliente autenticado
+    
+    GET /orders/current
+    """
+    logger.info("Getting current active order for customer")
+    
+    tenant_id = get_tenant_id(event)
+    customer_id = get_user_id(event)
+    user_type = get_user_type(event)
+    
+    if user_type != 'customer':
+        raise UnauthorizedError("Solo clientes pueden ver su pedido actual")
+    
+    if not customer_id:
+        raise ValidationError("No se pudo identificar al usuario")
+    
+    logger.info(f"Customer {customer_id} requesting current order")
+    
+    # Obtener todos los pedidos del cliente
+    all_orders = orders_db.query_items(
+        'customer_id',
+        customer_id,
+        index_name='customer-orders-index'
+    )
+    
+    # Filtrar pedidos activos (no entregados ni fallidos)
+    active_statuses = ['pending', 'confirmed', 'cooking', 'packing', 'ready', 'in_delivery']
+    active_orders = [
+        o for o in all_orders 
+        if o.get('status') in active_statuses
+    ]
+    
+    if not active_orders:
+        logger.info(f"No active orders found for customer {customer_id}")
+        return success_response({
+            'has_active_order': False,
+            'order': None,
+            'message': 'No tienes pedidos en curso'
+        })
+    
+    # Obtener el más reciente
+    current_order = max(active_orders, key=lambda x: x.get('created_at', 0))
+    order_id = current_order.get('order_id')
+    
+    logger.info(f"Found active order {order_id} for customer {customer_id}")
+    
+    # Enriquecer con información del workflow
+    workflow = workflow_db.get_item({'order_id': order_id})
+    workflow_info = None
+    
+    if workflow:
+        steps = workflow.get('steps', [])
+        completed_steps = [s for s in steps if s.get('completed_at')]
+        
+        workflow_info = {
+            'current_status': workflow.get('current_status'),
+            'steps': steps,
+            'progress': {
+                'total_steps': len(steps),
+                'completed_steps': len(completed_steps),
+                'percentage': int((len(completed_steps) / len(steps)) * 100) if steps else 0
+            },
+            'estimated_time': _calculate_estimated_time(workflow)
+        }
+    
+    # Serializar respuesta
+    serialized_order = dict(current_order)
+    if 'total' in serialized_order:
+        serialized_order['total'] = float(serialized_order['total'])
+    if 'items' in serialized_order:
+        serialized_order['items'] = _serialize_items(serialized_order['items'])
+    
+    if workflow_info:
+        serialized_order['workflow'] = workflow_info
+    
+    return success_response({
+        'has_active_order': True,
+        'order': serialized_order
+    })
+
+
+# ============================================================================
+# FUNCIÓN 6: GET ORDER STATUS - Estado detallado con timeline
+# ============================================================================
+
+@error_handler
+def get_order_status(event, context):
+    """
+    Obtiene el estado detallado de un pedido con timeline
+    Para que el cliente pueda ver el progreso en tiempo real
+    
+    GET /orders/{order_id}/status
+    """
+    logger.info("Getting order status with timeline")
+    
+    order_id = get_path_param_from_path(event, 'order_id')
+    customer_id = get_user_id(event)
+    user_type = get_user_type(event)
+    tenant_id = get_tenant_id(event)
+    
+    if not order_id:
+        raise ValidationError("order_id es requerido")
+    
+    logger.info(f"User {customer_id} ({user_type}) requesting status for order {order_id}")
+    
+    # Obtener el pedido
+    order = orders_db.get_item({'order_id': order_id})
+    if not order:
+        raise NotFoundError(f"Pedido {order_id} no encontrado")
+    
+    # Validar tenant
+    if order.get('tenant_id') != tenant_id:
+        raise UnauthorizedError("El pedido no pertenece a tu organización")
+    
+    # Validar que el cliente es dueño del pedido (si es customer)
+    if user_type == 'customer' and order.get('customer_id') != customer_id:
+        raise UnauthorizedError("No tienes permiso para ver este pedido")
+    
+    # Obtener workflow con timeline
+    workflow = workflow_db.get_item({'order_id': order_id})
+    
+    # Construir información de estado
+    status_info = {
+        'order_id': order_id,
+        'status': order.get('status'),
+        'status_label': _get_status_label(order.get('status')),
+        'created_at': order.get('created_at'),
+        'updated_at': order.get('updated_at'),
+        'estimated_delivery_time': None,
+        'timeline': []
+    }
+    
+    if workflow:
+        steps = workflow.get('steps', [])
+        
+        # Construir timeline desde los steps
+        status_info['timeline'] = [
+            {
+                'step': step.get('status'),
+                'label': _get_status_label(step.get('status')),
+                'assigned_to': step.get('assigned_to', 'system'),
+                'started_at': step.get('started_at'),
+                'completed_at': step.get('completed_at'),
+                'is_completed': step.get('completed_at') is not None,
+                'duration_seconds': (
+                    step.get('completed_at') - step.get('started_at')
+                    if step.get('completed_at') and step.get('started_at')
+                    else None
+                ),
+                'notes': step.get('notes')
+            }
+            for step in steps
+        ]
+        
+        # Calcular tiempo estimado de entrega
+        status_info['estimated_delivery_time'] = _calculate_estimated_delivery(workflow, order)
+        
+        # Agregar información de progreso
+        completed_steps = [s for s in steps if s.get('completed_at')]
+        status_info['progress'] = {
+            'total_steps': len(steps),
+            'completed_steps': len(completed_steps),
+            'percentage': int((len(completed_steps) / len(steps)) * 100) if steps else 0
+        }
+    
+    logger.info(f"Status retrieved for order {order_id}")
+    
+    return success_response(status_info)
+
+
+# ============================================================================
 # FUNCIONES AUXILIARES
 # ============================================================================
 
@@ -521,3 +699,103 @@ def _get_state_machine_arn():
     
     logger.info(f"State Machine ARN: {arn}")
     return arn
+
+
+def _get_status_label(status):
+    """Obtiene la etiqueta legible de un estado"""
+    labels = {
+        'pending': 'Pendiente',
+        'confirmed': 'Confirmado',
+        'cooking': 'En Cocina',
+        'packing': 'Empaquetando',
+        'ready': 'Listo para Recoger',
+        'in_delivery': 'En Camino',
+        'delivered': 'Entregado',
+        'failed': 'Fallido'
+    }
+    return labels.get(status, status.capitalize())
+
+
+def _calculate_estimated_time(workflow):
+    """Calcula tiempo estimado basado en el workflow"""
+    if not workflow:
+        return None
+    
+    steps = workflow.get('steps', [])
+    if not steps:
+        return None
+    
+    # Tiempos promedio por estado (en segundos)
+    avg_times = {
+        'pending': 30,
+        'confirmed': 60,
+        'cooking': 600,  # 10 minutos
+        'packing': 120,  # 2 minutos
+        'ready': 0,
+        'in_delivery': 900,  # 15 minutos
+        'delivered': 0
+    }
+    
+    total_seconds = 0
+    for step in steps:
+        status = step.get('status')
+        if step.get('completed_at'):
+            # Si está completado, usar tiempo real
+            if step.get('started_at') and step.get('completed_at'):
+                total_seconds += (step.get('completed_at') - step.get('started_at'))
+        else:
+            # Si no está completado, usar tiempo promedio
+            total_seconds += avg_times.get(status, 0)
+    
+    if total_seconds < 60:
+        return f"{int(total_seconds)}s"
+    elif total_seconds < 3600:
+        return f"{int(total_seconds / 60)}m"
+    else:
+        hours = int(total_seconds / 3600)
+        minutes = int((total_seconds % 3600) / 60)
+        return f"{hours}h {minutes}m"
+
+
+def _calculate_estimated_delivery(workflow, order):
+    """Calcula tiempo estimado de entrega"""
+    if not workflow:
+        return None
+    
+    current_status = workflow.get('current_status', order.get('status'))
+    created_at = order.get('created_at', 0)
+    current_time = current_timestamp()
+    
+    # Tiempos promedio restantes por estado
+    remaining_times = {
+        'pending': 1200,  # 20 minutos
+        'confirmed': 1140,  # 19 minutos
+        'cooking': 720,  # 12 minutos
+        'packing': 1020,  # 17 minutos
+        'ready': 900,  # 15 minutos
+        'in_delivery': 600,  # 10 minutos
+        'delivered': 0
+    }
+    
+    remaining_seconds = remaining_times.get(current_status, 0)
+    estimated_delivery = current_time + remaining_seconds
+    
+    return {
+        'estimated_seconds': remaining_seconds,
+        'estimated_timestamp': estimated_delivery,
+        'estimated_readable': _seconds_to_readable(remaining_seconds)
+    }
+
+
+def _seconds_to_readable(seconds):
+    """Convierte segundos a formato legible"""
+    if seconds < 60:
+        return f"{int(seconds)} segundos"
+    elif seconds < 3600:
+        return f"{int(seconds / 60)} minutos"
+    else:
+        hours = int(seconds / 3600)
+        minutes = int((seconds % 3600) / 60)
+        if minutes > 0:
+            return f"{hours} hora{'s' if hours > 1 else ''} y {minutes} minuto{'s' if minutes > 1 else ''}"
+        return f"{hours} hora{'s' if hours > 1 else ''}"

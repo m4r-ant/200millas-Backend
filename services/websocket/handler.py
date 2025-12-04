@@ -19,15 +19,39 @@ connections_db = DynamoDBService(os.environ.get('WEBSOCKET_CONNECTIONS_TABLE'))
 subscriptions_db = DynamoDBService(os.environ.get('WEBSOCKET_SUBSCRIPTIONS_TABLE'))
 
 # API Gateway Management API para enviar mensajes a WebSocket
-apigateway = boto3.client('apigatewaymanagementapi')
+# El endpoint se construye dinámicamente desde el evento o variables de entorno
 
-# Obtener el endpoint de WebSocket
-def get_websocket_endpoint():
-    """Obtiene el endpoint de API Gateway WebSocket"""
-    # Se pasa en tiempo de ejecución en los parámetros del evento
-    # En local: http://localhost:3001
-    # En prod: https://xxxxx.execute-api.region.amazonaws.com/stage
-    return os.environ.get('WEBSOCKET_ENDPOINT', '')
+def get_websocket_management_endpoint(event=None):
+    """
+    Obtiene el endpoint de API Gateway Management API para enviar mensajes
+    
+    El endpoint es: https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+    """
+    # Intentar obtener del evento (si viene de WebSocket handler)
+    if event and 'requestContext' in event:
+        domain = event['requestContext'].get('domainName')
+        stage = event['requestContext'].get('stage')
+        if domain and stage:
+            # Convertir wss:// a https:// para Management API
+            endpoint = domain.replace('wss://', 'https://').replace('ws://', 'https://')
+            return endpoint
+    
+    # Intentar construir desde variables de entorno
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+    api_id = os.environ.get('WEBSOCKET_API_ID', '')
+    stage = os.environ.get('SERVERLESS_STAGE', 'dev')
+    
+    if api_id:
+        return f"https://{api_id}.execute-api.{region}.amazonaws.com/{stage}"
+    
+    # Fallback: intentar desde WEBSOCKET_ENDPOINT si está configurado
+    endpoint = os.environ.get('WEBSOCKET_ENDPOINT', '')
+    if endpoint:
+        # Convertir wss:// a https://
+        return endpoint.replace('wss://', 'https://').replace('ws://', 'https://')
+    
+    logger.warning("No WebSocket Management API endpoint found")
+    return None
 
 # ============================================================================
 # HANDLERS PRINCIPALES
@@ -39,7 +63,7 @@ def connect(event, context):
     
     Event contiene:
     - requestContext.connectionId: ID único de la conexión
-    - queryStringParameters.token: JWT del usuario
+    - queryStringParameters.token: JWT del usuario (opcional)
     """
     try:
         connection_id = event['requestContext']['connectionId']
@@ -49,10 +73,27 @@ def connect(event, context):
         query_params = event.get('queryStringParameters') or {}
         token = query_params.get('token', '')
         
-        # Extraer información del usuario del token (simplificado)
-        # En producción, verificarías el token
-        user_id = query_params.get('user_id', f'user_{uuid.uuid4()}')
-        user_type = query_params.get('user_type', 'customer')  # customer, chef, driver, admin
+        # Intentar verificar token si está presente
+        user_id = None
+        user_type = 'customer'
+        user_email = None
+        
+        if token:
+            try:
+                from shared.security import verify_token
+                payload = verify_token(token)
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type', 'customer')
+                user_email = payload.get('email')
+                logger.info(f"Token verified: {user_id} ({user_type})")
+            except Exception as e:
+                logger.warning(f"Token verification failed: {str(e)}")
+                # Continuar sin autenticación (permite conexiones anónimas)
+        
+        # Si no hay token o falló, usar valores por defecto
+        if not user_id:
+            user_id = query_params.get('user_id', f'anonymous_{uuid.uuid4()}')
+            user_type = query_params.get('user_type', 'customer')
         
         timestamp = current_timestamp()
         expires_at = timestamp + (86400 * 7)  # 7 días de TTL
@@ -62,6 +103,7 @@ def connect(event, context):
             'connection_id': connection_id,
             'user_id': user_id,
             'user_type': user_type,
+            'email': user_email,
             'connected_at': timestamp,
             'expires_at': expires_at,  # Para TTL
             'subscribed_orders': []
@@ -72,7 +114,12 @@ def connect(event, context):
         
         return {
             'statusCode': 200,
-            'body': json.dumps({'message': 'Connected'})
+            'body': json.dumps({
+                'message': 'Connected',
+                'connection_id': connection_id,
+                'user_id': user_id,
+                'user_type': user_type
+            })
         }
         
     except Exception as e:
@@ -184,7 +231,7 @@ def default(event, context):
                 'type': 'subscribed',
                 'order_id': order_id,
                 'message': f'Suscrito a actualizaciones del pedido {order_id}'
-            })
+            }, event)
         
         # ============================================================================
         # ACTION: unsubscribe_order
@@ -214,7 +261,7 @@ def default(event, context):
                 'type': 'unsubscribed',
                 'order_id': order_id,
                 'message': f'Desuscrito del pedido {order_id}'
-            })
+            }, event)
         
         # ============================================================================
         # ACTION: get_subscriptions
@@ -225,14 +272,14 @@ def default(event, context):
             return send_message(connection_id, {
                 'type': 'subscriptions',
                 'orders': connection.get('subscribed_orders', [])
-            })
+            }, event)
         
         # Acción desconocida
         else:
             return send_message(connection_id, {
                 'type': 'error',
                 'message': f'Acción desconocida: {action}'
-            })
+            }, event)
         
     except Exception as e:
         logger.error(f"Error in default: {str(e)}")
@@ -363,19 +410,57 @@ def notify_order_update(event, context):
         sent = 0
         failed = 0
         
+        # Obtener el endpoint de Management API desde variables de entorno o construir
+        # Cuando se invoca desde EventBridge, no tenemos el evento de WebSocket
+        # Necesitamos construir el endpoint desde variables de entorno
+        region = os.environ.get('AWS_REGION', 'us-east-1')
+        api_id = os.environ.get('WEBSOCKET_API_ID', '')
+        stage = os.environ.get('SERVERLESS_STAGE', 'dev')
+        
+        if not api_id:
+            # Intentar obtener desde WEBSOCKET_ENDPOINT
+            endpoint_str = os.environ.get('WEBSOCKET_ENDPOINT', '')
+            if endpoint_str:
+                # Extraer API ID del endpoint: wss://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+                import re
+                match = re.search(r'wss://([^.]+)\.execute-api', endpoint_str)
+                if match:
+                    api_id = match.group(1)
+        
+        if not api_id:
+            logger.error("WEBSOCKET_API_ID not configured. Cannot send messages.")
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': 'WebSocket API ID not configured'})
+            }
+        
+        management_endpoint = f"https://{api_id}.execute-api.{region}.amazonaws.com/{stage}"
+        logger.info(f"Using Management API endpoint: {management_endpoint}")
+        
+        # Crear cliente una sola vez
+        client = boto3.client(
+            'apigatewaymanagementapi',
+            endpoint_url=management_endpoint
+        )
+        
         for connection_id in connection_ids:
             try:
-                result = send_message(connection_id, message)
-                if result.get('statusCode') == 200:
-                    sent += 1
-                else:
-                    failed += 1
-                    # Si falla, eliminar la conexión (probablemente esté desconectada)
-                    try:
-                        connections_db.delete_item({'connection_id': connection_id})
-                        logger.info(f"Removed stale connection: {connection_id}")
-                    except:
-                        pass
+                # Enviar mensaje directamente usando el cliente
+                client.post_to_connection(
+                    ConnectionId=connection_id,
+                    Data=json.dumps(message).encode('utf-8')
+                )
+                sent += 1
+                logger.info(f"Message sent to {connection_id}")
+            except client.exceptions.GoneException:
+                logger.warning(f"Connection gone (closed): {connection_id}")
+                failed += 1
+                # Eliminar conexión de DynamoDB
+                try:
+                    connections_db.delete_item({'connection_id': connection_id})
+                    logger.info(f"Removed stale connection: {connection_id}")
+                except:
+                    pass
             except Exception as e:
                 logger.error(f"Error sending to {connection_id}: {str(e)}")
                 failed += 1
@@ -405,21 +490,24 @@ def notify_order_update(event, context):
 # FUNCIONES AUXILIARES
 # ============================================================================
 
-def send_message(connection_id, message):
+def send_message(connection_id, message, event=None):
     """
     Envía un mensaje a través de WebSocket a una conexión específica
     
     Usa API Gateway Management API
+    
+    Args:
+        connection_id: ID de la conexión WebSocket
+        message: Mensaje a enviar (dict)
+        event: Evento opcional para obtener el endpoint (si viene de WebSocket handler)
     """
     try:
-        # Obtener endpoint de API Gateway
-        endpoint = get_websocket_endpoint()
+        # Obtener endpoint de Management API
+        endpoint = get_websocket_management_endpoint(event)
         
-        # Si no hay endpoint en env, construirlo desde el contexto
         if not endpoint:
-            # En ejecución real, AWS lo proporciona automáticamente
-            logger.warning("No websocket endpoint configured")
-            return {'statusCode': 500}
+            logger.error("No WebSocket Management API endpoint available")
+            return {'statusCode': 500, 'error': 'No endpoint configured'}
         
         # Crear cliente con el endpoint
         client = boto3.client(
@@ -436,17 +524,23 @@ def send_message(connection_id, message):
         logger.info(f"Message sent to {connection_id}")
         return {'statusCode': 200, 'response': response}
         
-    except client.exceptions.GoneException:
-        logger.warning(f"Connection gone (closed): {connection_id}")
-        # Eliminar conexión de DynamoDB
-        try:
-            connections_db.delete_item({'connection_id': connection_id})
-        except:
-            pass
-        return {'statusCode': 410}
-    
     except Exception as e:
+        error_str = str(e)
+        error_type = type(e).__name__
+        
+        # Verificar si es GoneException (conexión cerrada)
+        if 'GoneException' in error_type or '410' in error_str or 'gone' in error_str.lower():
+            logger.warning(f"Connection gone (closed): {connection_id}")
+            # Eliminar conexión de DynamoDB
+            try:
+                connections_db.delete_item({'connection_id': connection_id})
+            except:
+                pass
+            return {'statusCode': 410}
+        
         logger.error(f"Error sending message to {connection_id}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {'statusCode': 500, 'error': str(e)}
 
 
