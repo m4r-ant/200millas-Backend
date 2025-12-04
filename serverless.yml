@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 29
   iam:
-    role: arn:aws:iam::722204368591:role/LabRole
+    role: arn:aws:iam::784426622446:role/LabRole
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -19,11 +19,11 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
-    AWS_ACCOUNT_ID: 722204368591
+    AWS_ACCOUNT_ID: 784426622446
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:722204368591:200millas-emails
+    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:784426622446:200millas-emails
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
 
 custom:
@@ -1050,7 +1050,7 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
-        RoleArn: arn:aws:iam::722204368591:role/LabRole
+        RoleArn: arn:aws:iam::784426622446:role/LabRole
         DefinitionString: !Sub |
           {
             "Comment": "Workflow automatizado: Chef cocina y empaqueta, luego driver entrega",
@@ -1204,7 +1204,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
-            RoleArn: arn:aws:iam::722204368591:role/LabRole
+            RoleArn: arn:aws:iam::784426622446:role/LabRole
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1246,7 +1246,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
-            RoleArn: arn:aws:iam::722204368591:role/LabRole
+            RoleArn: arn:aws:iam::784426622446:role/LabRole
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:
