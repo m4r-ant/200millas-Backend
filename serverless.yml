@@ -659,7 +659,6 @@ functions:
       WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
       WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
       WEBSOCKET_API_ID: !GetAtt WebsocketsApi.ApiId
-      AWS_REGION: ${aws:region}
       SERVERLESS_STAGE: ${sls:stage}
 
   # ============================================================================

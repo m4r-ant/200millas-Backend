@@ -156,11 +156,12 @@ def authorize(event, context):
     
     method_arn = event.get('methodArn', '')
     
-    logger.info(f"Token received: {token[:20]}... (length: {len(token)})")
+    logger.info(f"Token received: {token[:20] if len(token) > 20 else token}... (length: {len(token)})")
     logger.info(f"Method ARN: {method_arn}")
     
     if not token:
         logger.warning("No authorization token provided")
+        # Devolver una política que deniega pero permite que API Gateway maneje CORS
         raise Exception('Unauthorized')
     
     try:

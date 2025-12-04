@@ -16,14 +16,15 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(obj)
 
 def response(status_code, body):
-    """Respuesta HTTP estándar con CORS"""
+    """Respuesta HTTP estándar con CORS - Headers completos para evitar errores CORS"""
     return {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+            'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+            'Access-Control-Max-Age': '86400'
         },
         'body': json.dumps(body, cls=DecimalEncoder),
         'body_json': body
