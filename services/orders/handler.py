@@ -1,226 +1,158 @@
-import json
-import uuid
+"""
+SOLUCIÓN: GET /orders y GET /orders/{order_id} con lógica diferenciada por rol
+
+Reemplaza estas dos funciones en services/orders/handler.py
+"""
 import os
-import boto3
 from decimal import Decimal
 from shared.utils import (
-    response, success_response, error_response, error_handler, 
-    parse_body, get_tenant_id, get_user_id, get_user_email, current_timestamp,
-    get_path_param_from_path, get_user_type
+    success_response, error_handler, get_tenant_id, get_user_id, 
+    get_user_email, parse_body, current_timestamp, get_path_param_from_path,
+    get_user_type
 )
 from shared.dynamodb import DynamoDBService
-from shared.eventbridge import EventBridgeService
 from shared.errors import NotFoundError, ValidationError, UnauthorizedError
 from shared.logger import get_logger
 
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
-stepfunctions = boto3.client('stepfunctions')
-
-@error_handler
-def create_order(event, context):
-    logger.info("Creating new order")
-    
-    # Debug: Log del evento para ver la estructura
-    logger.info(f"Event keys: {list(event.keys())}")
-    if 'requestContext' in event:
-        logger.info(f"RequestContext keys: {list(event['requestContext'].keys())}")
-        if 'authorizer' in event['requestContext']:
-            logger.info(f"Authorizer keys: {list(event['requestContext']['authorizer'].keys())}")
-    
-    body = parse_body(event)
-    tenant_id = get_tenant_id(event)
-    customer_id = get_user_id(event) or body.get('customer_id')
-    customer_email = get_user_email(event) or body.get('customer_email')
-    
-    # Normalizar customer_id (asegurar que sea string y sin espacios)
-    if customer_id:
-        customer_id = str(customer_id).strip()
-    if customer_email:
-        customer_email = str(customer_email).strip()
-    
-    logger.info(f"Extracted - tenant_id: {tenant_id}, customer_id: {customer_id}, customer_email: {customer_email}")
-
-    if not customer_id:
-        raise ValidationError("customer_id es requerido (inicia sesión o inclúyelo en el body)")
-    
-    items = body.get('items', [])
-    if not items or len(items) == 0:
-        raise ValidationError("Debe incluir al menos un item en el pedido")
-    
-    # ✅ Validar estructura de items
-    for idx, item in enumerate(items):
-        if not item.get('item_id'):
-            raise ValidationError(f"Item {idx + 1}: item_id es requerido")
-        if not item.get('name'):
-            raise ValidationError(f"Item {idx + 1}: name es requerido")
-        if 'price' not in item:
-            raise ValidationError(f"Item {idx + 1}: price es requerido")
-        if 'quantity' not in item:
-            raise ValidationError(f"Item {idx + 1}: quantity es requerido")
-        
-        try:
-            price = float(item['price'])
-            quantity = int(item['quantity'])
-            if price <= 0:
-                raise ValidationError(f"Item {idx + 1}: price debe ser mayor a 0")
-            if quantity <= 0:
-                raise ValidationError(f"Item {idx + 1}: quantity debe ser mayor a 0")
-        except (ValueError, TypeError):
-            raise ValidationError(f"Item {idx + 1}: price o quantity inválido")
-    
-    # ✅ Validar que el total coincida con los items
-    calculated_total = sum(
-        float(item['price']) * int(item['quantity'])
-        for item in items
-    )
-    
-    total = body.get('total', 0)
-    try:
-        total = float(total)
-    except (ValueError, TypeError):
-        raise ValidationError("Total inválido")
-    
-    if total <= 0:
-        raise ValidationError("El total debe ser mayor a 0")
-    
-    # ✅ Verificar que el total enviado coincida con el calculado (tolerancia de 0.01)
-    if abs(total - calculated_total) > 0.01:
-        raise ValidationError(
-            f"El total enviado ({total}) no coincide con el calculado ({calculated_total:.2f})"
-        )
-    
-    order_id = str(uuid.uuid4())
-    timestamp = current_timestamp()
-    
-    normalized_items = _normalize_items(items)
-
-    order = {
-        'order_id': order_id,
-        'tenant_id': tenant_id,
-        'customer_id': customer_id,
-        'customer_email': customer_email,
-        'items': normalized_items,
-        'status': 'pending',
-        'total': Decimal(str(total)),
-        'created_at': timestamp,
-        'updated_at': timestamp
-    }
-    
-    success = orders_db.put_item(order)
-    if not success:
-        logger.error(f"Failed to save order {order_id}")
-        raise Exception("Error al crear el pedido")
-    
-    EventBridgeService.put_event(
-        source='orders.service',
-        detail_type='OrderCreated',
-        detail={
-            'order_id': order_id,
-            'customer_id': customer_id,
-            'customer_email': customer_email,
-            'items': items,
-            'total': float(total)
-        },
-        tenant_id=tenant_id
-    )
-    
-    # Iniciar Step Function para workflow automatizado
-    try:
-        # ✅ Construir ARN dinámicamente usando variables de entorno
-        region = os.environ.get('AWS_REGION', 'us-east-1')
-        account_id = os.environ.get('AWS_ACCOUNT_ID', '722204368591')
-        service_name = os.environ.get('SERVERLESS_SERVICE', 'millas-backend')
-        stage = os.environ.get('SERVERLESS_STAGE', 'dev')
-        
-        step_function_arn = f"arn:aws:states:{region}:{account_id}:stateMachine:{service_name}-{stage}-order-workflow"
-        
-        stepfunctions.start_execution(
-            stateMachineArn=step_function_arn,
-            name=f"order-{order_id}",
-            input=json.dumps({
-                'order_id': order_id,
-                'tenant_id': tenant_id,
-                'customer_id': customer_id,
-                'customer_email': customer_email
-            })
-        )
-        logger.info(f"Step Function started for order {order_id}")
-    except Exception as e:
-        logger.warning(f"Could not start Step Function: {str(e)}")
-        # No fallar si Step Function no está disponible
-    
-    logger.info(f"Order created: {order_id}")
-    
-    response_order = {
-        **order,
-        'total': float(order['total']),
-        'items': _serialize_items(order['items'])
-    }
-    
-    return success_response(response_order, 201)
 
 
-def _normalize_items(items):
-    normalized = []
-    for item in items:
-        normalized_item = dict(item)
-        if 'price' in normalized_item:
-            normalized_item['price'] = Decimal(str(normalized_item['price']))
-        if 'quantity' in normalized_item:
-            normalized_item['quantity'] = int(normalized_item['quantity'])
-        normalized.append(normalized_item)
-    return normalized
-
-
-def _serialize_items(items):
-    """Convierte todos los Decimals a float para JSON serialization"""
-    serialized = []
-    for item in items:
-        serialized_item = {}
-        for key, value in item.items():
-            # Convertir Decimal a float
-            if isinstance(value, Decimal):
-                serialized_item[key] = float(value)
-            else:
-                serialized_item[key] = value
-        serialized.append(serialized_item)
-    return serialized
+# ============================================================================
+# ✅ FUNCIÓN 1: GET /orders - CORREGIDA
+# ============================================================================
 
 @error_handler
 def get_orders(event, context):
-    logger.info("Getting orders")
+    """
+    Obtiene pedidos según el rol del usuario.
     
-    # Debug: Log del evento para ver la estructura
-    logger.info(f"Event keys: {list(event.keys())}")
-    if 'requestContext' in event:
-        logger.info(f"RequestContext keys: {list(event['requestContext'].keys())}")
-        if 'authorizer' in event['requestContext']:
-            logger.info(f"Authorizer keys: {list(event['requestContext']['authorizer'].keys())}")
-            logger.info(f"Authorizer content: {event['requestContext']['authorizer']}")
+    ROLES Y PERMISOS:
+    - Cliente (customer): solo sus propios pedidos
+    - Chef/Staff (chef/staff): todos los pedidos del tenant (con filtros opcionales)
+    - Admin (admin): todos los pedidos del tenant (sin restricciones)
+    - Driver (driver): debe usar endpoints específicos (/driver/available, /driver/assigned)
     
+    FILTROS DISPONIBLES (query params):
+    - ?status=pending - Filtra por un estado específico
+    - ?statuses=pending,cooking,ready - Filtra por múltiples estados
+    - ?customer_id=john - Solo para admins, filtra por cliente
+    """
+    logger.info("Getting orders with role-based logic")
+    
+    # ✅ Extraer información del usuario autenticado
     tenant_id = get_tenant_id(event)
-    customer_id = get_user_id(event)
+    user_type = get_user_type(event)  # ✅ CRÍTICO: Verificar el rol
+    user_id = get_user_id(event)
+    user_email = get_user_email(event)
     
-    # Normalizar customer_id (asegurar que sea string y sin espacios)
-    if customer_id:
-        customer_id = str(customer_id).strip()
+    logger.info(f"User: {user_id} ({user_email}), Type: {user_type}, Tenant: {tenant_id}")
     
-    logger.info(f"Searching orders for - tenant_id: {tenant_id}, customer_id: {customer_id}")
+    # ============================================================================
+    # LÓGICA DIFERENCIADA POR ROL
+    # ============================================================================
     
-    if not customer_id:
-        logger.warning("No customer_id found in token, cannot filter orders")
-        raise ValidationError("No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.")
+    # ✅ CASO 1: CLIENTE - Solo sus propios pedidos
+    if user_type == 'customer':
+        logger.info(f"Customer {user_id} requesting their orders")
+        
+        if not user_id:
+            raise ValidationError("No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.")
+        
+        # Query directo al índice customer-orders-index
+        items = orders_db.query_items(
+            'customer_id',
+            user_id,
+            index_name='customer-orders-index'
+        )
+        
+        logger.info(f"Found {len(items)} orders for customer {user_id}")
     
-    # ✅ USAR ÍNDICE DIRECTO EN LUGAR DE FILTRAR EN MEMORIA
-    items = orders_db.query_items(
-        'customer_id',
-        customer_id,
-        index_name='customer-orders-index'
-    )
+    # ✅ CASO 2: CHEF/STAFF - Todos los pedidos del tenant (con filtros)
+    elif user_type in ['chef', 'staff']:
+        logger.info(f"Chef/Staff {user_id} requesting orders")
+        
+        # Obtener TODOS los pedidos del tenant
+        items = orders_db.query_items(
+            'tenant_id',
+            tenant_id,
+            index_name='tenant-created-index'
+        )
+        
+        logger.info(f"Chef/Staff retrieved {len(items)} orders from tenant")
+        
+        # ✅ FILTROS OPCIONALES por query parameters
+        query_params = event.get('queryStringParameters') or {}
+        
+        # Filtro 1: Por un solo estado (?status=pending)
+        status_filter = query_params.get('status', '').strip().lower()
+        if status_filter:
+            original_count = len(items)
+            items = [o for o in items if o.get('status') == status_filter]
+            logger.info(f"Filtered by status '{status_filter}': {len(items)}/{original_count} orders")
+        
+        # Filtro 2: Por múltiples estados (?statuses=pending,cooking,ready)
+        statuses_filter = query_params.get('statuses', '').strip().lower()
+        if statuses_filter:
+            allowed_statuses = [s.strip() for s in statuses_filter.split(',')]
+            original_count = len(items)
+            items = [o for o in items if o.get('status') in allowed_statuses]
+            logger.info(f"Filtered by statuses {allowed_statuses}: {len(items)}/{original_count} orders")
+        
+        logger.info(f"Chef/Staff final result: {len(items)} orders")
     
-    # ✅ Serializar Decimals correctamente
+    # ✅ CASO 3: ADMIN - Todos los pedidos sin restricciones
+    elif user_type == 'admin':
+        logger.info(f"Admin {user_id} requesting all orders")
+        
+        # Obtener TODOS los pedidos del tenant
+        items = orders_db.query_items(
+            'tenant_id',
+            tenant_id,
+            index_name='tenant-created-index'
+        )
+        
+        logger.info(f"Admin retrieved {len(items)} orders from tenant")
+        
+        # ✅ Admin puede filtrar opcionalmente
+        query_params = event.get('queryStringParameters') or {}
+        
+        # Filtro por estado
+        status_filter = query_params.get('status', '').strip().lower()
+        if status_filter:
+            original_count = len(items)
+            items = [o for o in items if o.get('status') == status_filter]
+            logger.info(f"Admin filtered by status '{status_filter}': {len(items)}/{original_count}")
+        
+        # Filtro por cliente (solo admin puede filtrar por customer_id)
+        customer_filter = query_params.get('customer_id', '').strip()
+        if customer_filter:
+            original_count = len(items)
+            items = [o for o in items if o.get('customer_id') == customer_filter]
+            logger.info(f"Admin filtered by customer '{customer_filter}': {len(items)}/{original_count}")
+        
+        logger.info(f"Admin final result: {len(items)} orders")
+    
+    # ✅ CASO 4: DRIVER - Redirigir a endpoints específicos
+    elif user_type == 'driver':
+        logger.warning(f"Driver {user_id} using wrong endpoint")
+        raise ValidationError(
+            "Como driver, usa estos endpoints específicos:\n"
+            "• GET /driver/available - Ver pedidos listos para recoger\n"
+            "• GET /driver/assigned - Ver tus pedidos asignados\n"
+            "• GET /driver/orders/{order_id} - Ver detalle de un pedido"
+        )
+    
+    # ✅ CASO 5: ROL DESCONOCIDO
+    else:
+        logger.error(f"Unknown user_type: {user_type}")
+        raise UnauthorizedError(f"Tipo de usuario no autorizado: {user_type}")
+    
+    # ============================================================================
+    # SERIALIZAR RESPUESTA (Convertir Decimals a float)
+    # ============================================================================
+    
     serialized_items = []
     for order in items:
         serialized_order = dict(order)
@@ -235,265 +167,152 @@ def get_orders(event, context):
         
         serialized_items.append(serialized_order)
     
-    logger.info(f"Found {len(serialized_items)} orders for customer_id: {customer_id}")
+    # ✅ Ordenar por fecha de creación (más reciente primero)
+    serialized_items.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+    
+    logger.info(f"Returning {len(serialized_items)} serialized orders")
     
     return success_response(serialized_items)
 
+
+# ============================================================================
+# ✅ FUNCIÓN 2: GET /orders/{order_id} - CORREGIDA
+# ============================================================================
+
 @error_handler
 def get_order(event, context):
-    logger.info("Getting order details")
+    """
+    Obtiene el detalle de un pedido específico.
     
-    # ✅ Usar la función mejorada para extraer order_id del path
+    ROLES Y PERMISOS:
+    - Cliente (customer): solo puede ver sus propios pedidos
+    - Chef/Staff (chef/staff): puede ver cualquier pedido del tenant
+    - Admin (admin): puede ver cualquier pedido del tenant
+    - Driver (driver): puede ver pedidos disponibles o asignados a él
+    
+    VALIDACIONES:
+    1. El pedido debe existir
+    2. El pedido debe pertenecer al mismo tenant
+    3. Según el rol, se validan permisos adicionales
+    """
+    logger.info("Getting order detail with role-based logic")
+    
+    # ✅ Extraer información del usuario y pedido
     order_id = get_path_param_from_path(event, 'order_id')
+    user_type = get_user_type(event)  # ✅ CRÍTICO: Verificar el rol
+    user_id = get_user_id(event)
+    user_email = get_user_email(event)
+    tenant_id = get_tenant_id(event)
     
-    logger.info(f"Extracted order_id: {order_id}")
+    logger.info(f"User: {user_id} ({user_email}), Type: {user_type}, Requesting order: {order_id}")
     
     if not order_id:
         raise ValidationError("order_id es requerido")
     
-    customer_id = get_user_id(event)
-    
+    # ✅ Obtener el pedido de DynamoDB
     order = orders_db.get_item({'order_id': order_id})
     
     if not order:
+        logger.warning(f"Order {order_id} not found")
         raise NotFoundError(f"Pedido {order_id} no encontrado")
     
-    if order.get('customer_id') != customer_id:
-        raise ValidationError("No tienes permiso para ver este pedido")
+    # ✅ VALIDACIÓN 1: El pedido debe pertenecer al mismo tenant
+    if order.get('tenant_id') != tenant_id:
+        logger.error(f"Order {order_id} belongs to different tenant")
+        raise UnauthorizedError("El pedido no pertenece a tu organización")
     
-    # ✅ Serializar correctamente el pedido completo
+    # ============================================================================
+    # LÓGICA DIFERENCIADA POR ROL
+    # ============================================================================
+    
+    # ✅ CASO 1: CLIENTE - Solo puede ver sus propios pedidos
+    if user_type == 'customer':
+        logger.info(f"Customer {user_id} requesting order {order_id}")
+        
+        # Validar que el pedido pertenece a este cliente
+        if order.get('customer_id') != user_id:
+            logger.warning(f"Customer {user_id} tried to access order {order_id} owned by {order.get('customer_id')}")
+            raise UnauthorizedError("No tienes permiso para ver este pedido")
+        
+        logger.info(f"Customer {user_id} authorized to view order {order_id}")
+    
+    # ✅ CASO 2: CHEF/STAFF - Puede ver cualquier pedido del tenant
+    elif user_type in ['chef', 'staff']:
+        logger.info(f"Chef/Staff {user_id} accessing order {order_id}")
+        # ✅ No se valida customer_id, puede ver cualquier pedido del tenant
+        logger.info(f"Chef/Staff {user_id} authorized to view order {order_id}")
+    
+    # ✅ CASO 3: ADMIN - Puede ver cualquier pedido del tenant
+    elif user_type == 'admin':
+        logger.info(f"Admin {user_id} accessing order {order_id}")
+        # ✅ No se valida customer_id, puede ver cualquier pedido del tenant
+        logger.info(f"Admin {user_id} authorized to view order {order_id}")
+    
+    # ✅ CASO 4: DRIVER - Puede ver pedidos disponibles o asignados
+    elif user_type == 'driver':
+        logger.info(f"Driver {user_id} ({user_email}) accessing order {order_id}")
+        
+        # Drivers pueden ver:
+        # 1. Pedidos en estado 'ready' (disponibles para recoger)
+        # 2. Pedidos asignados a ellos (assigned_driver coincide)
+        
+        order_status = order.get('status')
+        assigned_driver = order.get('assigned_driver')
+        driver_identifier = user_email or user_id
+        
+        is_available = order_status == 'ready'
+        is_assigned = (assigned_driver == user_email or 
+                      assigned_driver == user_id or 
+                      assigned_driver == driver_identifier)
+        
+        if not (is_available or is_assigned):
+            logger.warning(f"Driver {driver_identifier} tried to access unauthorized order {order_id}")
+            raise UnauthorizedError(
+                "Solo puedes ver pedidos que estén:\n"
+                "• En estado 'ready' (disponibles para recoger)\n"
+                "• Asignados a ti (assigned_driver coincide)"
+            )
+        
+        logger.info(f"Driver {driver_identifier} authorized to view order {order_id}")
+    
+    # ✅ CASO 5: ROL DESCONOCIDO
+    else:
+        logger.error(f"Unknown user_type: {user_type}")
+        raise UnauthorizedError(f"Tipo de usuario no autorizado: {user_type}")
+    
+    # ============================================================================
+    # SERIALIZAR RESPUESTA
+    # ============================================================================
+    
     serialized_order = dict(order)
     
+    # Convertir total a float
     if 'total' in serialized_order:
         serialized_order['total'] = float(serialized_order['total'])
     
+    # Serializar items dentro de la orden
     if 'items' in serialized_order:
         serialized_order['items'] = _serialize_items(serialized_order['items'])
     
-    logger.info(f"Order details retrieved: {order_id}")
+    logger.info(f"Order {order_id} details retrieved successfully for {user_type} {user_id}")
     
     return success_response(serialized_order)
 
 
 # ============================================================================
-# NUEVA FUNCIÓN: Actualizar estado de pedido
+# FUNCIÓN AUXILIAR (ya existe en tu código)
 # ============================================================================
 
-@error_handler
-def update_order_status(event, context):
-    """
-    Actualiza el estado de una orden.
-    
-    Flujo de estados válidos:
-    pending → cooking → ready → dispatched → delivered
-    
-    Permisos:
-    - Chef (staff): puede cambiar a cooking, ready, packing
-    - Repartidor (driver): puede cambiar a dispatched, delivered
-    - Admin: puede cambiar a cualquier estado
-    
-    Path: PATCH /orders/{order_id}/status
-    Body: { "status": "ready" }
-    """
-    
-    logger.info("Updating order status")
-    
-    # ✅ Extraer parámetros
-    order_id = get_path_param_from_path(event, 'order_id')
-    tenant_id = get_tenant_id(event)
-    user_id = get_user_id(event)
-    user_email = get_user_email(event)
-    user_type = get_user_type(event)
-    body = parse_body(event)
-    
-    logger.info(f"Order: {order_id} | User: {user_id} ({user_type}) | New Status: {body.get('status')}")
-    
-    # ✅ Validar order_id
-    if not order_id:
-        raise ValidationError("order_id es requerido")
-    
-    # ✅ Extraer y validar nuevo estado
-    new_status = body.get('status', '').strip().lower()
-    if not new_status:
-        raise ValidationError("status es requerido en el body")
-    
-    notes = body.get('notes', '').strip()
-    
-    # ✅ Obtener orden actual
-    order = orders_db.get_item({'order_id': order_id})
-    if not order:
-        logger.error(f"Order {order_id} not found")
-        raise NotFoundError(f"Pedido {order_id} no encontrado")
-    
-    current_status = order.get('status')
-    logger.info(f"Current status: {current_status}")
-    
-    # ✅ Validar transición de estado
-    if not _is_valid_transition(current_status, new_status):
-        logger.warning(f"Invalid transition: {current_status} → {new_status}")
-        raise ValidationError(
-            f"Transición no permitida: {current_status} → {new_status}"
-        )
-    
-    # ✅ Validar permisos por rol
-    _validate_permissions(user_type, current_status, new_status)
-    
-    # ✅ Validar que el cliente no actualice su propia orden
-    if user_type == 'customer':
-        raise UnauthorizedError("Clientes no pueden cambiar el estado de sus pedidos")
-    
-    timestamp = current_timestamp()
-    
-    # ✅ Actualizar orden en DynamoDB
-    update_data = {
-        'status': new_status,
-        'updated_at': timestamp,
-        'updated_by': user_email or user_id
-    }
-    
-    # Si es el primer cambio a cooking, registrar cuándo empezó
-    if new_status == 'cooking' and current_status == 'pending':
-        update_data['cooking_started_at'] = timestamp
-    
-    # Si es entrega, registrar cuándo se completó
-    if new_status == 'delivered':
-        update_data['delivered_at'] = timestamp
-    
-    orders_db.update_item({'order_id': order_id}, update_data)
-    logger.info(f"Order {order_id} updated to {new_status}")
-    
-    # ✅ Actualizar workflow
-    workflow = workflow_db.get_item({'order_id': order_id})
-    if not workflow:
-        workflow = {'order_id': order_id, 'steps': []}
-    
-    # Completar el paso anterior si existe
-    if workflow.get('steps'):
-        last_step = workflow['steps'][-1]
-        if last_step.get('status') == current_status and not last_step.get('completed_at'):
-            last_step['completed_at'] = timestamp
-            logger.info(f"Completed previous step: {current_status}")
-    
-    # Agregar nuevo step
-    new_step = {
-        'status': new_status,
-        'assigned_to': user_email or user_id,
-        'started_at': timestamp,
-        'completed_at': None,
-        'notes': notes if notes else None
-    }
-    
-    workflow['steps'].append(new_step)
-    workflow['current_status'] = new_status
-    workflow['updated_at'] = timestamp
-    
-    workflow_db.put_item(workflow)
-    logger.info(f"Workflow for {order_id} updated with new step: {new_status}")
-    
-    # ✅ Publicar evento en EventBridge para notificaciones en tiempo real
-    EventBridgeService.put_event(
-        source='orders.service',
-        detail_type='OrderStatusChanged',
-        detail={
-            'order_id': order_id,
-            'old_status': current_status,
-            'new_status': new_status,
-            'updated_by': user_email or user_id,
-            'user_type': user_type,
-            'timestamp': timestamp,
-            'notes': notes
-        },
-        tenant_id=tenant_id
-    )
-    logger.info(f"Event published: OrderStatusChanged for {order_id}")
-    
-    # ✅ Retornar respuesta
-    return success_response({
-        'order_id': order_id,
-        'old_status': current_status,
-        'new_status': new_status,
-        'updated_at': timestamp,
-        'message': f'Pedido actualizado a {new_status}'
-    }, 200)
-
-
-# ============================================================================
-# FUNCIONES AUXILIARES
-# ============================================================================
-
-def _is_valid_transition(current_status, new_status):
-    """
-    Valida si una transición de estado es permitida.
-    
-    Flujo de estados:
-    pending → cooking → ready → dispatched → delivered
-    
-    También permite:
-    pending → cooking → packing → dispatched → delivered
-    
-    Y estados de fallo:
-    Cualquier estado → failed (para manejar errores)
-    """
-    
-    valid_transitions = {
-        'pending': ['cooking', 'confirmed'],
-        'confirmed': ['cooking'],
-        'cooking': ['ready', 'packing'],
-        'ready': ['dispatched', 'packing'],
-        'packing': ['dispatched'],
-        'dispatched': ['delivered'],
-        'delivered': [],
-        'failed': []
-    }
-    
-    allowed = valid_transitions.get(current_status, [])
-    is_valid = new_status in allowed
-    
-    logger.info(f"Transition validation: {current_status} → {new_status} = {is_valid}")
-    return is_valid
-
-
-def _validate_permissions(user_type, current_status, new_status):
-    """
-    Valida que el usuario tenga permiso para hacer este cambio de estado.
-    
-    Permisos:
-    - chef/staff: cooking, ready, packing
-    - driver: dispatched, delivered
-    - admin: todo
-    """
-    
-    logger.info(f"Validating permissions: user_type={user_type}, transition={current_status}→{new_status}")
-    
-    # Admin puede hacer todo
-    if user_type == 'admin':
-        logger.info("Admin user, permissions granted")
-        return True
-    
-    # Chef solo puede cambiar a estados de cocina
-    if user_type == 'staff' or user_type == 'chef':
-        allowed_statuses = ['cooking', 'ready', 'packing', 'confirmed']
-        if new_status not in allowed_statuses:
-            logger.warning(f"Chef tried to change to {new_status}")
-            raise UnauthorizedError(
-                f"Como chef, solo puedes cambiar a: {', '.join(allowed_statuses)}"
-            )
-        logger.info("Chef permissions validated")
-        return True
-    
-    # Driver solo puede cambiar a estados de entrega
-    if user_type == 'driver':
-        allowed_statuses = ['dispatched', 'delivered']
-        if new_status not in allowed_statuses:
-            logger.warning(f"Driver tried to change to {new_status}")
-            raise UnauthorizedError(
-                f"Como repartidor, solo puedes cambiar a: {', '.join(allowed_statuses)}"
-            )
-        logger.info("Driver permissions validated")
-        return True
-    
-    # Otros tipos no pueden cambiar estado
-    logger.warning(f"User type {user_type} not authorized to change order status")
-    raise UnauthorizedError(
-        f"Tu tipo de usuario ({user_type}) no puede cambiar el estado de pedidos"
-    )
+def _serialize_items(items):
+    """Convierte todos los Decimals a float para JSON serialization"""
+    serialized = []
+    for item in items:
+        serialized_item = {}
+        for key, value in item.items():
+            # Convertir Decimal a float
+            if isinstance(value, Decimal):
+                serialized_item[key] = float(value)
+            else:
+                serialized_item[key] = value
+        serialized.append(serialized_item)
+    return serialized

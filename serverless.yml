@@ -30,6 +30,10 @@ custom:
     layer: false
 
 functions:
+  # ============================================================================
+  # AUTH - Autenticación y Autorización
+  # ============================================================================
+  
   login:
     handler: services/auth/handler.login
     events:
@@ -64,6 +68,10 @@ functions:
             resultTtlInSeconds: 300
             identitySource: method.request.header.Authorization
             type: token
+
+  # ============================================================================
+  # DRIVER - Endpoints para Repartidores
+  # ============================================================================
 
   getAvailableOrders:
     handler: services/driver/handler.get_available_orders
@@ -180,6 +188,10 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  # ============================================================================
+  # ORDERS - Gestión de Pedidos
+  # ============================================================================
+
   createOrder:
     handler: services/orders/handler.create_order
     events:
@@ -230,6 +242,25 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  # ✅ NUEVO: Endpoint para actualizar estado de pedido (Chef/Admin)
+  updateOrderStatus:
+    handler: services/orders/handler.update_order_status
+    events:
+      - http:
+          path: /orders/{order_id}/status
+          method: patch
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # DASHBOARD - Métricas y Estadísticas
+  # ============================================================================
+
   getDashboard:
     handler: services/dashboard/handler.get_dashboard
     events:
@@ -272,6 +303,10 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  # ============================================================================
+  # MENU - Catálogo de Productos
+  # ============================================================================
+
   getCategories:
     handler: services/menu/handler.get_categories
     events:
@@ -304,6 +339,56 @@ functions:
             identitySource: method.request.header.Authorization
             type: token
 
+  # ============================================================================
+  # ADMIN - Gestión de Usuarios (NUEVO)
+  # ============================================================================
+
+  listChefs:
+    handler: services/admin/handler.list_chefs
+    events:
+      - http:
+          path: /admin/chefs
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  listDrivers:
+    handler: services/admin/handler.list_drivers
+    events:
+      - http:
+          path: /admin/drivers
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  listAllUsers:
+    handler: services/admin/handler.list_all_users
+    events:
+      - http:
+          path: /admin/users
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
+  # WORKFLOW - Step Functions Handlers (Internos)
+  # ============================================================================
+
   confirmOrder:
     handler: services/workflow/step_functions_handlers.confirm_order
     timeout: 30
@@ -319,6 +404,10 @@ functions:
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
     timeout: 30
+
+  # ============================================================================
+  # WEBSOCKET - Notificaciones en Tiempo Real
+  # ============================================================================
 
   wsConnect:
     handler: services/websocket/handler.connect
@@ -345,12 +434,24 @@ functions:
       WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
       WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
 
+  # ============================================================================
+  # EMAIL - Notificaciones por Email
+  # ============================================================================
+
   sendOrderEmails:
     handler: services/email/handler.send_order_notifications
     timeout: 29
 
+# ============================================================================
+# RECURSOS DE AWS
+# ============================================================================
+
 resources:
   Resources:
+    # ========================================
+    # DynamoDB Tables
+    # ========================================
+
     OrdersTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -441,6 +542,55 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
+    WebSocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-WebSocketConnections
+        AttributeDefinitions:
+          - AttributeName: connection_id
+            AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connection_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: user-id-index
+            KeySchema:
+              - AttributeName: user_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+        TimeToLiveSpecification:
+          AttributeName: expires_at
+          Enabled: true
+
+    WebSocketSubscriptionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${sls:stage}-WebSocketSubscriptions
+        AttributeDefinitions:
+          - AttributeName: subscription_id
+            AttributeType: S
+          - AttributeName: order_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: subscription_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: order-id-index
+            KeySchema:
+              - AttributeName: order_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    # ========================================
+    # S3 Bucket para Imágenes del Menú
+    # ========================================
+
     MenuImagesBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -478,6 +628,10 @@ resources:
                 - "arn:aws:s3:::${BucketName}/*"
                 - BucketName: !Ref MenuImagesBucket
 
+    # ========================================
+    # EventBridge - Bus de Eventos
+    # ========================================
+
     CustomEventBus:
       Type: AWS::Events::EventBus
       Properties:
@@ -506,6 +660,10 @@ resources:
             - OrderFailed
         State: ENABLED
         Description: Captura todos los eventos relacionados con pedidos y workflow
+
+    # ========================================
+    # Step Functions - Workflow Automatizado
+    # ========================================
 
     OrderWorkflowStateMachine:
       Type: AWS::StepFunctions::StateMachine
@@ -605,50 +763,9 @@ resources:
             }
           }
 
-    WebSocketConnectionsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${sls:stage}-WebSocketConnections
-        AttributeDefinitions:
-          - AttributeName: connection_id
-            AttributeType: S
-          - AttributeName: user_id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: connection_id
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: user-id-index
-            KeySchema:
-              - AttributeName: user_id
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-        BillingMode: PAY_PER_REQUEST
-        TimeToLiveSpecification:
-          AttributeName: expires_at
-          Enabled: true
-
-    WebSocketSubscriptionsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${sls:stage}-WebSocketSubscriptions
-        AttributeDefinitions:
-          - AttributeName: subscription_id
-            AttributeType: S
-          - AttributeName: order_id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: subscription_id
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: order-id-index
-            KeySchema:
-              - AttributeName: order_id
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-        BillingMode: PAY_PER_REQUEST
+    # ========================================
+    # EventBridge Rules - WebSocket Notifications
+    # ========================================
 
     OrderStatusChangedRule:
       Type: AWS::Events::Rule
@@ -683,6 +800,10 @@ resources:
         Principal: events.amazonaws.com
         SourceArn: !GetAtt OrderStatusChangedRule.Arn
 
+    # ========================================
+    # EventBridge Rules - Email Notifications
+    # ========================================
+
     OrderEmailsRule:
       Type: AWS::Events::Rule
       Properties:
@@ -715,6 +836,10 @@ resources:
         Action: lambda:InvokeFunction
         Principal: events.amazonaws.com
         SourceArn: !GetAtt OrderEmailsRule.Arn
+
+# ============================================================================
+# OUTPUTS
+# ============================================================================
 
 outputs:
   ApiGatewayRestApiId:
