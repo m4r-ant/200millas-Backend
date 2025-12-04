@@ -18,6 +18,7 @@ sqs = boto3.client('sqs')
 
 # URLs de las colas
 CHEF_QUEUE_URL = os.environ.get('CHEF_ASSIGNMENT_QUEUE')
+# NOTA: Los chefs también empaquetan, no hay cola separada de packers
 # NOTA: Drivers son asignados manualmente, no usan SQS
 
 
@@ -136,11 +137,11 @@ def assign_cook(event, context):
 
 def complete_cooking(event, context):
     """
-    Paso 3: Marca como ready y ENVÍA A COLA DE DRIVERS
-    ✅ CAMBIO: Después de marcar ready, envía a cola SQS de drivers
+    Paso 3: Marca como packing (el mismo chef empaqueta)
+    ✅ CAMBIO: El chef cocina y luego empaqueta, no se envía a otra cola
     """
     try:
-        logger.info("Completing cooking and queuing for driver")
+        logger.info("Completing cooking, chef will now pack")
         
         order_id = event.get('order_id')
         tenant_id = event.get('tenant_id', os.environ.get('TENANT_ID'))
@@ -151,10 +152,74 @@ def complete_cooking(event, context):
         order = orders_db.get_item({'order_id': order_id})
         assigned_chef = order.get('assigned_chef') if order else None
         
-        # Marcar como ready
+        # Marcar como packing (el mismo chef empaqueta)
         orders_db.update_item(
             {'order_id': order_id},
-            {'status': 'ready', 'updated_at': timestamp, 'ready_at': timestamp}
+            {'status': 'packing', 'updated_at': timestamp}
+        )
+        
+        workflow = workflow_db.get_item({'order_id': order_id})
+        if workflow:
+            if workflow.get('steps'):
+                last_step = workflow['steps'][-1]
+                if last_step.get('status') == 'cooking':
+                    last_step['completed_at'] = timestamp
+            
+            # Agregar step de packing (mismo chef)
+            step = {
+                'status': 'packing',
+                'assigned_to': assigned_chef or 'system',
+                'started_at': timestamp,
+                'completed_at': None,
+                'notes': 'Cocción completada, empaquetando'
+            }
+            workflow['steps'].append(step)
+            workflow['current_status'] = 'packing'
+            workflow['updated_at'] = timestamp
+            workflow_db.put_item(workflow)
+        
+        EventBridgeService.put_event(
+            source='workflow.service',
+            detail_type='OrderCookingCompleted',
+            detail={'order_id': order_id, 'status': 'packing', 'chef': assigned_chef},
+            tenant_id=tenant_id
+        )
+        
+        logger.info(f"Order {order_id} cooking completed, now packing by {assigned_chef}")
+        
+        return {
+            'order_id': order_id,
+            'status': 'packing',
+            'timestamp': timestamp,
+            'success': True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error completing cooking: {str(e)}")
+        raise Exception(f"CompleteCookingError: {str(e)}")
+
+
+def complete_packing(event, context):
+    """
+    Paso 4: Marca como completamente empaquetado (listo para driver)
+    El chef terminó de empaquetar
+    """
+    try:
+        logger.info("Completing packing")
+        
+        order_id = event.get('order_id')
+        tenant_id = event.get('tenant_id', os.environ.get('TENANT_ID'))
+        
+        timestamp = current_timestamp()
+        
+        # Obtener el pedido para saber qué chef estaba asignado
+        order = orders_db.get_item({'order_id': order_id})
+        assigned_chef = order.get('assigned_chef') if order else None
+        
+        # Marcar como ready (listo para driver)
+        orders_db.update_item(
+            {'order_id': order_id},
+            {'status': 'ready', 'updated_at': timestamp, 'ready_at': timestamp, 'packed_at': timestamp}
         )
         
         # ============================================
@@ -189,15 +254,15 @@ def complete_cooking(event, context):
         if workflow:
             if workflow.get('steps'):
                 last_step = workflow['steps'][-1]
-                if last_step.get('status') == 'cooking':
+                if last_step.get('status') == 'packing':
                     last_step['completed_at'] = timestamp
             
             step = {
                 'status': 'ready',
                 'assigned_to': 'system',
                 'started_at': timestamp,
-                'completed_at': None,
-                'notes': 'Listo para recoger'
+                'completed_at': timestamp,
+                'notes': 'Empaquetado y listo para recoger por repartidor'
             }
             workflow['steps'].append(step)
             workflow['current_status'] = 'ready'
@@ -206,8 +271,8 @@ def complete_cooking(event, context):
         
         EventBridgeService.put_event(
             source='workflow.service',
-            detail_type='OrderReady',
-            detail={'order_id': order_id, 'status': 'ready'},
+            detail_type='OrderPacked',
+            detail={'order_id': order_id, 'status': 'ready', 'chef': assigned_chef},
             tenant_id=tenant_id
         )
         
@@ -217,7 +282,7 @@ def complete_cooking(event, context):
         # cuando esté listo (usando POST /driver/pickup/{order_id})
         # ============================================
         
-        logger.info(f"Order {order_id} ready and queued for driver")
+        logger.info(f"Order {order_id} packed and ready for driver")
         
         return {
             'order_id': order_id,
@@ -227,8 +292,8 @@ def complete_cooking(event, context):
         }
         
     except Exception as e:
-        logger.error(f"Error completing cooking: {str(e)}")
-        raise Exception(f"CompleteCookingError: {str(e)}")
+        logger.error(f"Error completing packing: {str(e)}")
+        raise Exception(f"CompletePackingError: {str(e)}")
 
 
 def handle_order_failure(event, context):

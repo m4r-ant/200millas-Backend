@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
 
-VALID_STATUSES = ['pending', 'confirmed', 'cooking', 'packing', 'in_delivery', 'delivered']
+VALID_STATUSES = ['pending', 'confirmed', 'cooking', 'packing', 'ready', 'in_delivery', 'delivered']
 
 @error_handler
 def update_workflow(event, context):

@@ -405,11 +405,10 @@ functions:
   completeCooking:
     handler: services/workflow/step_functions_handlers.complete_cooking
     timeout: 30
-    environment:
-      DRIVER_ASSIGNMENT_QUEUE:
-        'Fn::GetAtt':
-          - DriverAssignmentQueue
-          - QueueUrl
+
+  completePacking:
+    handler: services/workflow/step_functions_handlers.complete_packing
+    timeout: 30
 
   handleOrderFailure:
     handler: services/workflow/step_functions_handlers.handle_order_failure
@@ -434,6 +433,68 @@ functions:
       - sqs:
           arn: !GetAtt DriverAssignmentQueue.Arn
           batchSize: 1
+
+  # ============================================================================
+  # CHEF - Endpoints para Chefs (Cocinar y Empaquetar)
+  # ============================================================================
+
+  getChefAssignedOrders:
+    handler: services/chef/handler.get_assigned_orders
+    events:
+      - http:
+          path: /chef/assigned
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getChefOrderDetail:
+    handler: services/chef/handler.get_order_detail
+    events:
+      - http:
+          path: /chef/orders/{order_id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  completeCookingManual:
+    handler: services/chef/handler.complete_cooking
+    timeout: 29
+    events:
+      - http:
+          path: /chef/complete-cooking/{order_id}
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  completePackingManual:
+    handler: services/chef/handler.complete_packing
+    timeout: 29
+    events:
+      - http:
+          path: /chef/complete-packing/{order_id}
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
 
   # ============================================================================
   # CHEF AVAILABILITY - NUEVOS
@@ -807,12 +868,15 @@ resources:
             - workflow.service
             - driver.service
             - queue.service
+            - chef.service
           detail-type:
             - OrderCreated
             - OrderUpdated
             - OrderConfirmed
             - OrderCooking
+            - OrderCookingCompleted
             - OrderPacking
+            - OrderPacked
             - OrderReady
             - OrderPickedUp
             - OrderInDelivery
@@ -835,7 +899,7 @@ resources:
         RoleArn: arn:aws:iam::722204368591:role/LabRole
         DefinitionString: !Sub |
           {
-            "Comment": "Workflow automatizado con SQS para asignación de chefs y drivers",
+            "Comment": "Workflow automatizado: Chef cocina y empaqueta, luego driver entrega",
             "StartAt": "ConfirmOrder",
             "States": {
               "ConfirmOrder": {
@@ -907,6 +971,33 @@ resources:
                     "Next": "OrderFailed"
                   }
                 ],
+                "Next": "WaitForPacking"
+              },
+              "WaitForPacking": {
+                "Type": "Wait",
+                "Seconds": 120,
+                "Next": "CompletePacking"
+              },
+              "CompletePacking": {
+                "Type": "Task",
+                "Resource": "${CompletePackingLambdaFunction.Arn}",
+                "ResultPath": "$.packingResult",
+                "TimeoutSeconds": 30,
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "ResultPath": "$.error",
+                    "Next": "OrderFailed"
+                  }
+                ],
                 "Next": "WaitForDriverPickup"
               },
               "WaitForDriverPickup": {
@@ -940,11 +1031,15 @@ resources:
             - driver.service
             - workflow.service
             - queue.service
+            - chef.service
           detail-type:
             - OrderCreated
             - OrderStatusChanged
             - OrderConfirmed
             - OrderCooking
+            - OrderCookingCompleted
+            - OrderPacking
+            - OrderPacked
             - OrderReady
             - OrderPickedUp
             - OrderInDelivery
@@ -980,11 +1075,15 @@ resources:
             - driver.service
             - workflow.service
             - queue.service
+            - chef.service
           detail-type:
             - OrderCreated
             - OrderStatusChanged
             - OrderConfirmed
             - OrderCooking
+            - OrderCookingCompleted
+            - OrderPacking
+            - OrderPacked
             - OrderReady
             - OrderPickedUp
             - OrderInDelivery
@@ -1051,3 +1150,4 @@ outputs:
     Value: !GetAtt DriverAssignmentQueue.QueueUrl
     Export:
       Name: ${self:service}-${sls:stage}-DriverQueueUrl
+
