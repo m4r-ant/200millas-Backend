@@ -15,7 +15,7 @@ provider:
     USERS_TABLE: ${sls:stage}-Users
     ADDRESSES_TABLE: ${sls:stage}-Addresses
     TENANT_ID: 200millas
-    MENU_IMAGES_BUCKET: ${self:service}-${sls:stage}-menu-images
+    MENU_IMAGES_BUCKET: ${self:service}-${sls:stage}-menu-images-v2
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
