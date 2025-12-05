@@ -232,7 +232,7 @@ def get_user_email(event):
             logger.info(f"✓ Email found in event.email: {result}")
             return result
         
-        # ✅ OPCIÓN 3: Si hay user_id, construir email como fallback
+        # ✅ OPCIÓN 3: Si hay user_id y parece ser un email completo, usarlo
         user_id = get_user_id(event)
         if user_id:
             # Si el user_id parece ser un email completo, usarlo
@@ -240,13 +240,11 @@ def get_user_email(event):
                 result = str(user_id).strip().lower()
                 logger.info(f"✓ Email constructed from user_id (already email): {result}")
                 return result
-            # Si el user_id es solo la parte antes del @, construir el email
-            # Intentar con el dominio común
-            constructed_email = f"{user_id}@200millas.com".lower()
-            logger.warning(f"Email not found in event, trying constructed email: {constructed_email}")
-            return constructed_email
+            # NO construir emails desde user_id porque no conocemos el dominio real
+            # (ej: usuario puede tener @gmail.com, @yahoo.com, etc.)
+            logger.warning(f"Email not found in event context, and user_id '{user_id}' is not a complete email")
         
-        logger.warning("Email not found in event and no user_id available")
+        logger.warning("Email not found in event and cannot be constructed from user_id")
         return None
         
     except Exception as e:

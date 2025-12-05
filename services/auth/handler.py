@@ -241,26 +241,45 @@ def get_profile(event, context):
     
     logger.info(f"Extracted user_email: {user_email}, user_id: {user_id}")
     
+    # Si el email no se encontró, intentar extraerlo del token directamente de los headers
     if not user_email:
-        # Intentar obtener email del user_id como fallback
+        try:
+            # Intentar obtener el token de los headers
+            headers = event.get('headers', {}) or {}
+            auth_header = headers.get('Authorization') or headers.get('authorization', '')
+            
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header.replace('Bearer ', '').strip()
+                logger.info("Attempting to extract email from token in Authorization header")
+                
+                # Verificar el token y extraer el email
+                from shared.security import verify_token
+                try:
+                    payload = verify_token(token)
+                    email_from_token = payload.get('email')
+                    if email_from_token:
+                        user_email = str(email_from_token).strip().lower()
+                        logger.info(f"✓ Email extracted from token: {user_email}")
+                except Exception as e:
+                    logger.warning(f"Could not extract email from token: {str(e)}")
+        except Exception as e:
+            logger.warning(f"Error trying to extract email from headers: {str(e)}")
+    
+    if not user_email:
+        # Si no hay email, intentar usar user_id si es un email completo
         if user_id:
-            logger.warning(f"Email not found, trying to construct from user_id: {user_id}")
-            # Si user_id es solo la parte antes del @, construir email
-            if '@' not in str(user_id):
-                possible_email = f"{user_id}@200millas.com"
-                logger.info(f"Trying constructed email: {possible_email}")
-                user = users_db.get_item({'email': possible_email})
-                if user:
-                    logger.info(f"Found user with constructed email: {possible_email}")
-                    user_email = possible_email
-                else:
-                    raise ValidationError("No se pudo identificar al usuario")
+            # Si user_id es un email completo, usarlo
+            if '@' in str(user_id):
+                user_email = str(user_id).strip().lower()
+                logger.info(f"Using user_id as email (it's a complete email): {user_email}")
             else:
-                # user_id ya es un email
-                user_email = user_id
-                logger.info(f"Using user_id as email: {user_email}")
+                # NO podemos construir el email desde user_id porque no conocemos el dominio real
+                # El email debería estar en el token JWT. Si no está, hay un problema.
+                logger.error(f"Email not found in token context and user_id '{user_id}' is not a complete email")
+                logger.error(f"Available event context: {json.dumps(event.get('requestContext', {}).get('authorizer', {}), default=str)}")
+                raise ValidationError("No se pudo identificar al usuario: el email no está disponible en el token")
         else:
-            raise ValidationError("No se pudo identificar al usuario")
+            raise ValidationError("No se pudo identificar al usuario: falta información de autenticación")
     
     # Normalizar email a lowercase para la búsqueda
     user_email = user_email.lower().strip() if user_email else None
@@ -278,25 +297,8 @@ def get_profile(event, context):
         if user:
             logger.info(f"✓ User found with exact email: {user_email}")
     
-    # Si no se encontró, intentar otras variantes
-    if not user and user_id:
-        # Intentar 2: Construir email desde user_id
-        if '@' not in str(user_id):
-            tenant_id = os.environ.get('TENANT_ID', '200millas')
-            possible_emails = [
-                f"{user_id}@{tenant_id}.com",
-                f"{user_id}@200millas.com"
-            ]
-            for possible_email in possible_emails:
-                normalized_email = possible_email.lower().strip()
-                if normalized_email not in search_attempts:
-                    search_attempts.append(normalized_email)
-                    logger.info(f"Trying constructed email: {normalized_email}")
-                    user = users_db.get_item({'email': normalized_email})
-                    if user:
-                        logger.info(f"✓ User found with constructed email: {normalized_email}")
-                        user_email = normalized_email
-                        break
+    # NO intentar construir emails desde user_id porque no conocemos el dominio real
+    # El email debe estar disponible en el token o no podremos encontrar al usuario
         elif user_id != user_email:
             # user_id es un email diferente, intentarlo también
             normalized_user_id = str(user_id).lower().strip()
