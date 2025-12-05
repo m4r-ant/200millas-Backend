@@ -267,24 +267,52 @@ def get_profile(event, context):
     
     logger.info(f"User {user_id} ({user_email}) requesting profile")
     
-    user = users_db.get_item({'email': user_email})
+    # Intentar múltiples variantes de búsqueda para mayor robustez
+    user = None
+    search_attempts = []
+    
+    if user_email:
+        # Intentar 1: Email exacto (normalizado)
+        search_attempts.append(user_email)
+        user = users_db.get_item({'email': user_email})
+        if user:
+            logger.info(f"✓ User found with exact email: {user_email}")
+    
+    # Si no se encontró, intentar otras variantes
+    if not user and user_id:
+        # Intentar 2: Construir email desde user_id
+        if '@' not in str(user_id):
+            tenant_id = os.environ.get('TENANT_ID', '200millas')
+            possible_emails = [
+                f"{user_id}@{tenant_id}.com",
+                f"{user_id}@200millas.com"
+            ]
+            for possible_email in possible_emails:
+                normalized_email = possible_email.lower().strip()
+                if normalized_email not in search_attempts:
+                    search_attempts.append(normalized_email)
+                    logger.info(f"Trying constructed email: {normalized_email}")
+                    user = users_db.get_item({'email': normalized_email})
+                    if user:
+                        logger.info(f"✓ User found with constructed email: {normalized_email}")
+                        user_email = normalized_email
+                        break
+        elif user_id != user_email:
+            # user_id es un email diferente, intentarlo también
+            normalized_user_id = str(user_id).lower().strip()
+            if normalized_user_id not in search_attempts:
+                search_attempts.append(normalized_user_id)
+                logger.info(f"Trying user_id as email: {normalized_user_id}")
+                user = users_db.get_item({'email': normalized_user_id})
+                if user:
+                    logger.info(f"✓ User found with user_id email: {normalized_user_id}")
+                    user_email = normalized_user_id
+    
     if not user:
-        logger.error(f"User not found in database for email: {user_email}")
+        logger.error(f"User not found in database after {len(search_attempts)} search attempts")
+        logger.error(f"Searched emails: {search_attempts}")
         logger.error(f"Available event context: {json.dumps(event.get('requestContext', {}).get('authorizer', {}), default=str)}")
-        
-        # Si el login fue exitoso pero el usuario no existe, puede ser un problema de sincronización
-        # Intentar buscar por user_id como fallback
-        if user_id and '@' not in str(user_id):
-            possible_email = f"{user_id}@200millas.com"
-            logger.warning(f"Trying fallback email: {possible_email}")
-            user = users_db.get_item({'email': possible_email.lower()})
-            if user:
-                logger.info(f"Found user with fallback email: {possible_email}")
-                user_email = possible_email.lower()
-            else:
-                raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
-        else:
-            raise NotFoundError(f"Usuario no encontrado para email: {user_email}")
+        raise NotFoundError(f"Usuario no encontrado para email: {user_email or 'desconocido'}")
     
     # Construir perfil (sin password)
     profile = {
