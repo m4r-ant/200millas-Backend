@@ -8,7 +8,7 @@ provider:
   timeout: 29
   logRetentionInDays: 1
   iam:
-    role: arn:aws:iam::${aws:accountId}:role/LabRole
+    role: arn:aws:iam::975049906176:role/LabRole
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -20,15 +20,16 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
-    AWS_ACCOUNT_ID: ${aws:accountId}
+    AWS_ACCOUNT_ID: 975049906176
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:200millas-emails"
+    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:975049906176:200millas-emails"
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID, ''}
 
 custom:
-  accountId: ${aws:accountId}
+  accountId: 975049906176
   pythonRequirements:
     dockerizePip: true
     layer: false
@@ -114,6 +115,15 @@ functions:
             resultTtlInSeconds: 300
             identitySource: method.request.header.Authorization
             type: token
+
+  authGoogle:
+    handler: services/auth/handler.auth_google
+    events:
+      - http:
+          path: /auth/google
+          method: post
+          cors: true
+          integration: lambda
 
   # ============================================================================
   # ADDRESSES - Gestión de Direcciones de Entrega
@@ -989,6 +999,8 @@ resources:
               AllowedOrigins:
                 - "*"
               MaxAge: 3000
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
 
     # ========================================
     # EventBridge - Bus de Eventos
@@ -1037,7 +1049,7 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
-        RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
         DefinitionString: !Sub |
           {
             "Comment": "Workflow automatizado: Chef cocina y empaqueta, luego driver entrega",
@@ -1191,7 +1203,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
-            RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1233,7 +1245,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
-            RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:
