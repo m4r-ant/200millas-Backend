@@ -8,11 +8,7 @@ provider:
   timeout: 29
   logRetentionInDays: 1
   iam:
-<<<<<<< HEAD
     role: arn:aws:iam::975050163564:role/LabRole
-=======
-    role: arn:aws:iam::975049906176:role/LabRole
->>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -24,24 +20,16 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
-<<<<<<< HEAD
     AWS_ACCOUNT_ID: 975050163564
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:975050163564:200millas-emails
-=======
-    AWS_ACCOUNT_ID: 975049906176
-    WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
-    WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
-    SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:975049906176:200millas-emails"
->>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
+    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:975050163564:200millas-emails"
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
     GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID, ''}
 
 custom:
-  accountId: 975049906176
+  accountId: 975050163564
   pythonRequirements:
     dockerizePip: true
     layer: false
@@ -1134,11 +1122,7 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
-<<<<<<< HEAD
-        RoleArn: arn:aws:iam::975050163564:role/LabRole
-=======
-        RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
->>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
+        RoleArn: !Sub "arn:aws:iam::975050163564:role/LabRole"
         DefinitionString: !Sub |
           {
             "Comment": "Workflow automatizado con Wait Tokens: Chef y Driver controlan el flujo manualmente",
@@ -1337,11 +1321,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
-<<<<<<< HEAD
-            RoleArn: arn:aws:iam::975050163564:role/LabRole
-=======
-            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
->>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
+            RoleArn: !Sub "arn:aws:iam::975050163564:role/LabRole"
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1383,11 +1363,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
-<<<<<<< HEAD
-            RoleArn: arn:aws:iam::975050163564:role/LabRole
-=======
-            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
->>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
+            RoleArn: !Sub "arn:aws:iam::975050163564:role/LabRole"
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:
