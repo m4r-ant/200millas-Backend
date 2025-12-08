@@ -339,3 +339,226 @@ def handle_order_failure(event, context):
     except Exception as e:
         logger.error(f"Error handling failure: {str(e)}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# ============================================================================
+# TASK TOKEN HANDLERS - Para wait tokens en Step Functions
+# ============================================================================
+
+def wait_for_cooking_token(event, context):
+    """
+    Recibe el TaskToken del Step Function y lo guarda en DynamoDB
+    El chef puede completar manualmente y enviar el token para continuar
+    """
+    try:
+        # El TaskToken viene en el evento cuando Step Functions invoca esta Lambda
+        task_token = event.get('TaskToken')
+        order_id = event.get('order_id')
+        
+        if not task_token:
+            logger.error("No TaskToken provided in event")
+            raise Exception("TaskToken is required")
+        
+        if not order_id:
+            logger.error("No order_id provided in event")
+            raise Exception("order_id is required")
+        
+        logger.info(f"Received TaskToken for cooking wait - order_id: {order_id}")
+        
+        # Guardar el token en el workflow
+        workflow = workflow_db.get_item({'order_id': order_id}) or {
+            'order_id': order_id,
+            'steps': []
+        }
+        
+        workflow['cooking_task_token'] = task_token
+        workflow['cooking_wait_started_at'] = current_timestamp()
+        workflow['updated_at'] = current_timestamp()
+        workflow_db.put_item(workflow)
+        
+        logger.info(f"✅ TaskToken saved for order {order_id} - waiting for chef to complete cooking")
+        
+        # No retornamos nada - Step Functions esperará hasta que se envíe sendTaskSuccess
+        # La función simplemente guarda el token y termina, dejando el workflow en espera
+        
+        return {
+            'order_id': order_id,
+            'status': 'waiting_for_cooking',
+            'message': 'Waiting for chef to complete cooking'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in wait_for_cooking_token: {str(e)}")
+        raise Exception(f"WaitForCookingTokenError: {str(e)}")
+
+
+def wait_for_packing_token(event, context):
+    """
+    Recibe el TaskToken del Step Function y lo guarda en DynamoDB
+    El chef puede completar manualmente y enviar el token para continuar
+    """
+    try:
+        task_token = event.get('TaskToken')
+        order_id = event.get('order_id')
+        
+        if not task_token:
+            logger.error("No TaskToken provided in event")
+            raise Exception("TaskToken is required")
+        
+        if not order_id:
+            logger.error("No order_id provided in event")
+            raise Exception("order_id is required")
+        
+        logger.info(f"Received TaskToken for packing wait - order_id: {order_id}")
+        
+        # Guardar el token en el workflow
+        workflow = workflow_db.get_item({'order_id': order_id}) or {
+            'order_id': order_id,
+            'steps': []
+        }
+        
+        workflow['packing_task_token'] = task_token
+        workflow['packing_wait_started_at'] = current_timestamp()
+        workflow['updated_at'] = current_timestamp()
+        workflow_db.put_item(workflow)
+        
+        logger.info(f"✅ TaskToken saved for order {order_id} - waiting for chef to complete packing")
+        
+        return {
+            'order_id': order_id,
+            'status': 'waiting_for_packing',
+            'message': 'Waiting for chef to complete packing'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in wait_for_packing_token: {str(e)}")
+        raise Exception(f"WaitForPackingTokenError: {str(e)}")
+
+
+def wait_for_driver_pickup_token(event, context):
+    """
+    Recibe el TaskToken del Step Function y lo guarda en DynamoDB
+    El driver puede recoger manualmente y enviar el token para continuar
+    """
+    try:
+        task_token = event.get('TaskToken')
+        order_id = event.get('order_id')
+        
+        if not task_token:
+            logger.error("No TaskToken provided in event")
+            raise Exception("TaskToken is required")
+        
+        if not order_id:
+            logger.error("No order_id provided in event")
+            raise Exception("order_id is required")
+        
+        logger.info(f"Received TaskToken for driver pickup wait - order_id: {order_id}")
+        
+        # Guardar el token en el workflow
+        workflow = workflow_db.get_item({'order_id': order_id}) or {
+            'order_id': order_id,
+            'steps': []
+        }
+        
+        workflow['driver_pickup_task_token'] = task_token
+        workflow['driver_pickup_wait_started_at'] = current_timestamp()
+        workflow['updated_at'] = current_timestamp()
+        workflow_db.put_item(workflow)
+        
+        logger.info(f"✅ TaskToken saved for order {order_id} - waiting for driver to pickup")
+        
+        return {
+            'order_id': order_id,
+            'status': 'waiting_for_driver_pickup',
+            'message': 'Waiting for driver to pickup order'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in wait_for_driver_pickup_token: {str(e)}")
+        raise Exception(f"WaitForDriverPickupTokenError: {str(e)}")
+
+
+def wait_for_order_confirmation_token(event, context):
+    """
+    Recibe el TaskToken del Step Function y lo guarda en DynamoDB
+    Un admin/staff puede confirmar manualmente el pedido
+    """
+    try:
+        task_token = event.get('TaskToken')
+        order_id = event.get('order_id')
+        
+        if not task_token:
+            logger.error("No TaskToken provided in event")
+            raise Exception("TaskToken is required")
+        
+        if not order_id:
+            logger.error("No order_id provided in event")
+            raise Exception("order_id is required")
+        
+        logger.info(f"Received TaskToken for order confirmation wait - order_id: {order_id}")
+        
+        # Guardar el token en el workflow
+        workflow = workflow_db.get_item({'order_id': order_id}) or {
+            'order_id': order_id,
+            'steps': []
+        }
+        
+        workflow['confirmation_task_token'] = task_token
+        workflow['confirmation_wait_started_at'] = current_timestamp()
+        workflow['updated_at'] = current_timestamp()
+        workflow_db.put_item(workflow)
+        
+        logger.info(f"✅ TaskToken saved for order {order_id} - waiting for manual confirmation")
+        
+        return {
+            'order_id': order_id,
+            'status': 'waiting_for_confirmation',
+            'message': 'Waiting for manual order confirmation'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in wait_for_order_confirmation_token: {str(e)}")
+        raise Exception(f"WaitForOrderConfirmationTokenError: {str(e)}")
+
+
+def wait_for_driver_delivery_token(event, context):
+    """
+    Recibe el TaskToken del Step Function y lo guarda en DynamoDB
+    El driver puede completar la entrega manualmente y enviar el token para continuar
+    """
+    try:
+        task_token = event.get('TaskToken')
+        order_id = event.get('order_id')
+        
+        if not task_token:
+            logger.error("No TaskToken provided in event")
+            raise Exception("TaskToken is required")
+        
+        if not order_id:
+            logger.error("No order_id provided in event")
+            raise Exception("order_id is required")
+        
+        logger.info(f"Received TaskToken for driver delivery wait - order_id: {order_id}")
+        
+        # Guardar el token en el workflow
+        workflow = workflow_db.get_item({'order_id': order_id}) or {
+            'order_id': order_id,
+            'steps': []
+        }
+        
+        workflow['driver_delivery_task_token'] = task_token
+        workflow['driver_delivery_wait_started_at'] = current_timestamp()
+        workflow['updated_at'] = current_timestamp()
+        workflow_db.put_item(workflow)
+        
+        logger.info(f"✅ TaskToken saved for order {order_id} - waiting for driver to complete delivery")
+        
+        return {
+            'order_id': order_id,
+            'status': 'waiting_for_delivery',
+            'message': 'Waiting for driver to complete delivery'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in wait_for_driver_delivery_token: {str(e)}")
+        raise Exception(f"WaitForDriverDeliveryTokenError: {str(e)}")

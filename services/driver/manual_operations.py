@@ -3,6 +3,8 @@ Driver Manual Operations - Permite a drivers tomar y completar pedidos manualmen
 Compatible con Step Functions pero permite control manual
 """
 import os
+import json
+import boto3
 from shared.utils import (
     success_response, error_handler, get_tenant_id, get_user_email, 
     parse_body, current_timestamp, get_path_param_from_path, get_user_id
@@ -15,6 +17,9 @@ from shared.logger import get_logger
 logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
+
+# Step Functions client para enviar tokens
+sfn_client = boto3.client('stepfunctions')
 
 
 @error_handler
@@ -115,6 +120,37 @@ def pickup_order(event, context):
         },
         tenant_id=tenant_id
     )
+    
+    # ============================================
+    # ENVIAR TASK TOKEN A STEP FUNCTIONS
+    # ============================================
+    try:
+        workflow = workflow_db.get_item({'order_id': order_id})
+        if workflow and workflow.get('driver_pickup_task_token'):
+            task_token = workflow['driver_pickup_task_token']
+            logger.info(f"Sending TaskSuccess to Step Functions for driver pickup - order_id: {order_id}")
+            
+            sfn_client.send_task_success(
+                taskToken=task_token,
+                output=json.dumps({
+                    'order_id': order_id,
+                    'status': 'in_delivery',
+                    'pickup_time': timestamp,
+                    'driver': driver_identifier
+                })
+            )
+            
+            # Limpiar el token del workflow
+            workflow['driver_pickup_task_token'] = None
+            workflow['driver_pickup_wait_started_at'] = None
+            workflow_db.put_item(workflow)
+            
+            logger.info(f"✅ TaskSuccess sent to Step Functions for order {order_id}")
+        else:
+            logger.info(f"No driver_pickup_task_token found for order {order_id} - Step Function may not be waiting")
+    except Exception as e:
+        logger.warning(f"Error sending TaskSuccess to Step Functions: {str(e)}")
+        # No fallar la operación si esto falla - el pedido ya se actualizó
     
     logger.info(f"✅ Order {order_id} picked up successfully by {driver_identifier}")
     
@@ -252,6 +288,37 @@ def complete_order(event, context):
     except Exception as e:
         logger.error(f"Error marking driver as available: {str(e)}")
         # No fallar el proceso si esto falla
+    
+    # ============================================
+    # ENVIAR TASK TOKEN A STEP FUNCTIONS
+    # ============================================
+    try:
+        workflow = workflow_db.get_item({'order_id': order_id})
+        if workflow and workflow.get('driver_delivery_task_token'):
+            task_token = workflow['driver_delivery_task_token']
+            logger.info(f"Sending TaskSuccess to Step Functions for delivery - order_id: {order_id}")
+            
+            sfn_client.send_task_success(
+                taskToken=task_token,
+                output=json.dumps({
+                    'order_id': order_id,
+                    'status': 'delivered',
+                    'delivered_at': timestamp,
+                    'driver': driver_identifier
+                })
+            )
+            
+            # Limpiar el token del workflow
+            workflow['driver_delivery_task_token'] = None
+            workflow['driver_delivery_wait_started_at'] = None
+            workflow_db.put_item(workflow)
+            
+            logger.info(f"✅ TaskSuccess sent to Step Functions for order {order_id}")
+        else:
+            logger.info(f"No driver_delivery_task_token found for order {order_id} - Step Function may not be waiting")
+    except Exception as e:
+        logger.warning(f"Error sending TaskSuccess to Step Functions: {str(e)}")
+        # No fallar la operación si esto falla - el pedido ya se actualizó
     
     logger.info(f"✅ Order {order_id} delivered successfully by {driver_identifier} in {delivery_duration_minutes} minutes")
     

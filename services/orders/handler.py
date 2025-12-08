@@ -690,7 +690,7 @@ def _serialize_items(items):
 def _get_state_machine_arn():
     """Construye el ARN de la Step Function"""
     region = os.environ.get('AWS_REGION', 'us-east-1')
-    account_id = os.environ.get('AWS_ACCOUNT_ID', '722204368591')
+    account_id = os.environ.get('AWS_ACCOUNT_ID', '975050163564')
     service = os.environ.get('SERVERLESS_SERVICE', 'millas-backend')
     stage = os.environ.get('SERVERLESS_STAGE', 'dev')
     

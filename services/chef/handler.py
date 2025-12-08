@@ -5,6 +5,7 @@ Los chefs cocinan y luego empaquetan los pedidos
 """
 import os
 import json
+import boto3
 from decimal import Decimal
 from shared.utils import (
     success_response, error_handler, get_tenant_id, get_user_id, 
@@ -20,6 +21,9 @@ logger = get_logger(__name__)
 orders_db = DynamoDBService(os.environ.get('ORDERS_TABLE'))
 workflow_db = DynamoDBService(os.environ.get('WORKFLOW_TABLE'))
 availability_db = DynamoDBService(os.environ.get('STAFF_AVAILABILITY_TABLE', 'dev-StaffAvailability'))
+
+# Step Functions client para enviar tokens
+sfn_client = boto3.client('stepfunctions')
 
 
 @error_handler
@@ -248,6 +252,37 @@ def complete_cooking(event, context):
         tenant_id=tenant_id
     )
     
+    # ============================================
+    # ENVIAR TASK TOKEN A STEP FUNCTIONS
+    # ============================================
+    try:
+        workflow = workflow_db.get_item({'order_id': order_id})
+        if workflow and workflow.get('cooking_task_token'):
+            task_token = workflow['cooking_task_token']
+            logger.info(f"Sending TaskSuccess to Step Functions for cooking - order_id: {order_id}")
+            
+            sfn_client.send_task_success(
+                taskToken=task_token,
+                output=json.dumps({
+                    'order_id': order_id,
+                    'status': 'packing',
+                    'completed_at': timestamp,
+                    'chef': chef_identifier
+                })
+            )
+            
+            # Limpiar el token del workflow
+            workflow['cooking_task_token'] = None
+            workflow['cooking_wait_started_at'] = None
+            workflow_db.put_item(workflow)
+            
+            logger.info(f"✅ TaskSuccess sent to Step Functions for order {order_id}")
+        else:
+            logger.info(f"No cooking_task_token found for order {order_id} - Step Function may not be waiting")
+    except Exception as e:
+        logger.warning(f"Error sending TaskSuccess to Step Functions: {str(e)}")
+        # No fallar la operación si esto falla - el pedido ya se actualizó
+    
     logger.info(f"Order {order_id} cooking completed by {chef_identifier}, now packing")
     
     return success_response({
@@ -368,6 +403,37 @@ def complete_packing(event, context):
         },
         tenant_id=tenant_id
     )
+    
+    # ============================================
+    # ENVIAR TASK TOKEN A STEP FUNCTIONS
+    # ============================================
+    try:
+        workflow = workflow_db.get_item({'order_id': order_id})
+        if workflow and workflow.get('packing_task_token'):
+            task_token = workflow['packing_task_token']
+            logger.info(f"Sending TaskSuccess to Step Functions for packing - order_id: {order_id}")
+            
+            sfn_client.send_task_success(
+                taskToken=task_token,
+                output=json.dumps({
+                    'order_id': order_id,
+                    'status': 'ready',
+                    'packed_at': timestamp,
+                    'chef': chef_identifier
+                })
+            )
+            
+            # Limpiar el token del workflow
+            workflow['packing_task_token'] = None
+            workflow['packing_wait_started_at'] = None
+            workflow_db.put_item(workflow)
+            
+            logger.info(f"✅ TaskSuccess sent to Step Functions for order {order_id}")
+        else:
+            logger.info(f"No packing_task_token found for order {order_id} - Step Function may not be waiting")
+    except Exception as e:
+        logger.warning(f"Error sending TaskSuccess to Step Functions: {str(e)}")
+        # No fallar la operación si esto falla - el pedido ya se actualizó
     
     logger.info(f"Order {order_id} packing completed by {chef_identifier}")
     

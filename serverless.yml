@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 29
   iam:
-    role: arn:aws:iam::784426622446:role/LabRole
+    role: arn:aws:iam::975050163564:role/LabRole
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -19,11 +19,11 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
-    AWS_ACCOUNT_ID: 784426622446
+    AWS_ACCOUNT_ID: 975050163564
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
-    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:784426622446:200millas-emails
+    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:975050163564:200millas-emails
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
 
 custom:
@@ -546,6 +546,79 @@ functions:
     timeout: 30
 
   # ============================================================================
+  # TASK TOKEN HANDLERS - Para wait tokens en Step Functions
+  # ============================================================================
+
+  waitForCookingToken:
+    handler: services/workflow/step_functions_handlers.wait_for_cooking_token
+    timeout: 30
+
+  waitForPackingToken:
+    handler: services/workflow/step_functions_handlers.wait_for_packing_token
+    timeout: 30
+
+  waitForDriverPickupToken:
+    handler: services/workflow/step_functions_handlers.wait_for_driver_pickup_token
+    timeout: 30
+
+  waitForOrderConfirmationToken:
+    handler: services/workflow/step_functions_handlers.wait_for_order_confirmation_token
+    timeout: 30
+
+  waitForDriverDeliveryToken:
+    handler: services/workflow/step_functions_handlers.wait_for_driver_delivery_token
+    timeout: 30
+
+  # ============================================================================
+  # TOKEN MANAGEMENT - Endpoints para gestionar wait tokens
+  # ============================================================================
+
+  getWaitTokenStatus:
+    handler: services/workflow/token_management.get_wait_token_status
+    timeout: 29
+    events:
+      - http:
+          path: /workflow/{order_id}/wait-tokens
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  confirmOrderManual:
+    handler: services/workflow/token_management.confirm_order_manual
+    timeout: 29
+    events:
+      - http:
+          path: /workflow/{order_id}/confirm
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  getAllWaitingOrders:
+    handler: services/workflow/token_management.get_all_waiting_orders
+    timeout: 29
+    events:
+      - http:
+          path: /workflow/waiting-orders
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  # ============================================================================
   # SQS PROCESSORS - NUEVOS
   # ============================================================================
 
@@ -1050,12 +1123,24 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
-        RoleArn: arn:aws:iam::784426622446:role/LabRole
+        RoleArn: arn:aws:iam::975050163564:role/LabRole
         DefinitionString: !Sub |
           {
-            "Comment": "Workflow automatizado: Chef cocina y empaqueta, luego driver entrega",
-            "StartAt": "ConfirmOrder",
+            "Comment": "Workflow automatizado con Wait Tokens: Chef y Driver controlan el flujo manualmente",
+            "StartAt": "WaitForConfirmation",
             "States": {
+              "WaitForConfirmation": {
+                "Type": "Task",
+                "Resource": "${WaitForOrderConfirmationTokenLambdaFunction.Arn}",
+                "Parameters": {
+                  "order_id.$": "$.order_id",
+                  "tenant_id.$": "$.tenant_id",
+                  "TaskToken.$": "$$.Task.Token"
+                },
+                "TimeoutSeconds": 3600,
+                "HeartbeatSeconds": 300,
+                "Next": "ConfirmOrder"
+              },
               "ConfirmOrder": {
                 "Type": "Task",
                 "Resource": "${ConfirmOrderLambdaFunction.Arn}",
@@ -1101,8 +1186,15 @@ resources:
                 "Next": "WaitForCooking"
               },
               "WaitForCooking": {
-                "Type": "Wait",
-                "Seconds": 300,
+                "Type": "Task",
+                "Resource": "${WaitForCookingTokenLambdaFunction.Arn}",
+                "Parameters": {
+                  "order_id.$": "$.order_id",
+                  "tenant_id.$": "$.tenant_id",
+                  "TaskToken.$": "$$.Task.Token"
+                },
+                "TimeoutSeconds": 3600,
+                "HeartbeatSeconds": 300,
                 "Next": "CompleteCooking"
               },
               "CompleteCooking": {
@@ -1128,8 +1220,15 @@ resources:
                 "Next": "WaitForPacking"
               },
               "WaitForPacking": {
-                "Type": "Wait",
-                "Seconds": 120,
+                "Type": "Task",
+                "Resource": "${WaitForPackingTokenLambdaFunction.Arn}",
+                "Parameters": {
+                  "order_id.$": "$.order_id",
+                  "tenant_id.$": "$.tenant_id",
+                  "TaskToken.$": "$$.Task.Token"
+                },
+                "TimeoutSeconds": 3600,
+                "HeartbeatSeconds": 300,
                 "Next": "CompletePacking"
               },
               "CompletePacking": {
@@ -1155,8 +1254,27 @@ resources:
                 "Next": "WaitForDriverPickup"
               },
               "WaitForDriverPickup": {
-                "Type": "Wait",
-                "Seconds": 7200,
+                "Type": "Task",
+                "Resource": "${WaitForDriverPickupTokenLambdaFunction.Arn}",
+                "Parameters": {
+                  "order_id.$": "$.order_id",
+                  "tenant_id.$": "$.tenant_id",
+                  "TaskToken.$": "$$.Task.Token"
+                },
+                "TimeoutSeconds": 14400,
+                "HeartbeatSeconds": 600,
+                "Next": "WaitForDriverDelivery"
+              },
+              "WaitForDriverDelivery": {
+                "Type": "Task",
+                "Resource": "${WaitForDriverDeliveryTokenLambdaFunction.Arn}",
+                "Parameters": {
+                  "order_id.$": "$.order_id",
+                  "tenant_id.$": "$.tenant_id",
+                  "TaskToken.$": "$$.Task.Token"
+                },
+                "TimeoutSeconds": 14400,
+                "HeartbeatSeconds": 600,
                 "Next": "WorkflowCompleted"
               },
               "WorkflowCompleted": {
@@ -1204,7 +1322,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
-            RoleArn: arn:aws:iam::784426622446:role/LabRole
+            RoleArn: arn:aws:iam::975050163564:role/LabRole
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1246,7 +1364,7 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
-            RoleArn: arn:aws:iam::784426622446:role/LabRole
+            RoleArn: arn:aws:iam::975050163564:role/LabRole
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:
