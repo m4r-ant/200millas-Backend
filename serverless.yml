@@ -4,10 +4,15 @@ service: millas-backend
 provider:
   name: aws
   runtime: python3.12
-  memorySize: 1024
+  memorySize: 256
   timeout: 29
+  logRetentionInDays: 1
   iam:
+<<<<<<< HEAD
     role: arn:aws:iam::975050163564:role/LabRole
+=======
+    role: arn:aws:iam::975049906176:role/LabRole
+>>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
   environment:
     ORDERS_TABLE: ${sls:stage}-Orders
     WORKFLOW_TABLE: ${sls:stage}-Workflow
@@ -19,14 +24,24 @@ provider:
     EVENTBRIDGE_BUS: ${self:service}-${sls:stage}-event-bus
     SERVERLESS_SERVICE: ${self:service}
     SERVERLESS_STAGE: ${sls:stage}
+<<<<<<< HEAD
     AWS_ACCOUNT_ID: 975050163564
     WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
     WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
     SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
     SNS_TOPIC_ARN: arn:aws:sns:us-east-1:975050163564:200millas-emails
+=======
+    AWS_ACCOUNT_ID: 975049906176
+    WEBSOCKET_CONNECTIONS_TABLE: ${sls:stage}-WebSocketConnections
+    WEBSOCKET_SUBSCRIPTIONS_TABLE: ${sls:stage}-WebSocketSubscriptions
+    SES_SENDER_EMAIL: marco.galindo.b@utec.edu.pe
+    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:975049906176:200millas-emails"
+>>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
     STAFF_AVAILABILITY_TABLE: ${sls:stage}-StaffAvailability
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID, ''}
 
 custom:
+  accountId: 975049906176
   pythonRequirements:
     dockerizePip: true
     layer: false
@@ -112,6 +127,15 @@ functions:
             resultTtlInSeconds: 300
             identitySource: method.request.header.Authorization
             type: token
+
+  authGoogle:
+    handler: services/auth/handler.auth_google
+    events:
+      - http:
+          path: /auth/google
+          method: post
+          cors: true
+          integration: lambda
 
   # ============================================================================
   # ADDRESSES - Gestión de Direcciones de Entrega
@@ -1044,10 +1068,10 @@ resources:
       Properties:
         BucketName: ${self:provider.environment.MENU_IMAGES_BUCKET}
         PublicAccessBlockConfiguration:
-          BlockPublicAcls: false
-          BlockPublicPolicy: false
-          IgnorePublicAcls: false
-          RestrictPublicBuckets: false
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
         CorsConfiguration:
           CorsRules:
             - AllowedHeaders:
@@ -1060,21 +1084,8 @@ resources:
               AllowedOrigins:
                 - "*"
               MaxAge: 3000
-
-    MenuImagesBucketPolicy:
-      Type: AWS::S3::BucketPolicy
-      Properties:
-        Bucket: !Ref MenuImagesBucket
-        PolicyDocument:
-          Statement:
-            - Sid: PublicReadGetObject
-              Effect: Allow
-              Principal: "*"
-              Action:
-                - s3:GetObject
-              Resource: !Sub 
-                - "arn:aws:s3:::${BucketName}/*"
-                - BucketName: !Ref MenuImagesBucket
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
 
     # ========================================
     # EventBridge - Bus de Eventos
@@ -1123,7 +1134,11 @@ resources:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         StateMachineName: ${self:service}-${sls:stage}-order-workflow
+<<<<<<< HEAD
         RoleArn: arn:aws:iam::975050163564:role/LabRole
+=======
+        RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
+>>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
         DefinitionString: !Sub |
           {
             "Comment": "Workflow automatizado con Wait Tokens: Chef y Driver controlan el flujo manualmente",
@@ -1322,7 +1337,11 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt WsNotifyOrderUpdateLambdaFunction.Arn
+<<<<<<< HEAD
             RoleArn: arn:aws:iam::975050163564:role/LabRole
+=======
+            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
+>>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
             Id: WsNotifyOrderUpdateTarget
 
     OrderStatusChangedRulePermission:
@@ -1364,7 +1383,11 @@ resources:
         State: ENABLED
         Targets:
           - Arn: !GetAtt SendOrderEmailsLambdaFunction.Arn
+<<<<<<< HEAD
             RoleArn: arn:aws:iam::975050163564:role/LabRole
+=======
+            RoleArn: !Sub "arn:aws:iam::975049906176:role/LabRole"
+>>>>>>> d3c0c8b90b2b511a887adeed4dff8733e884135b
             Id: SendOrderEmailsTarget
 
     OrderEmailsRulePermission:

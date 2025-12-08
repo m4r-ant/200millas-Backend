@@ -8,17 +8,23 @@ s3_client = boto3.client('s3')
 MENU_IMAGES_BUCKET = os.environ.get('MENU_IMAGES_BUCKET', '')
 
 def _get_image_url(image_name):
-    """Genera URL pública de S3 para imagen del menú"""
+    """Genera URL presignada de S3 para imagen del menú (bucket privado)"""
     if not MENU_IMAGES_BUCKET or not image_name:
         return None
     
     try:
-        # URL pública de S3
-        region = os.environ.get('AWS_REGION', 'us-east-1')
-        url = f"https://{MENU_IMAGES_BUCKET}.s3.{region}.amazonaws.com/{image_name}"
+        # Generar presigned URL con expiración de 3600 segundos (1 hora)
+        url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': MENU_IMAGES_BUCKET,
+                'Key': image_name
+            },
+            ExpiresIn=3600
+        )
         return url
     except Exception as e:
-        logger.warning(f"Error generating image URL: {str(e)}")
+        logger.warning(f"Error generating presigned URL: {str(e)}")
         return None
 
 MENU_DATA = {

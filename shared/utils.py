@@ -202,7 +202,7 @@ def get_user_email(event):
                     if isinstance(context, dict):
                         email = context.get('email')
                         if email:
-                            result = str(email).strip()
+                            result = str(email).strip().lower()
                             logger.info(f"✓ Email found in requestContext.authorizer.context.email: {result}")
                             return result
                     elif isinstance(context, str):
@@ -212,7 +212,7 @@ def get_user_email(event):
                             context_dict = json.loads(context)
                             email = context_dict.get('email')
                             if email:
-                                result = str(email).strip()
+                                result = str(email).strip().lower()
                                 logger.info(f"✓ Email found in requestContext.authorizer.context (parsed JSON).email: {result}")
                                 return result
                         except:
@@ -221,32 +221,30 @@ def get_user_email(event):
                 # Luego intentar directamente en authorizer (fallback)
                 email = authorizer.get('email')
                 if email:
-                    result = str(email).strip()
+                    result = str(email).strip().lower()
                     logger.info(f"✓ Email found in requestContext.authorizer.email: {result}")
                     return result
         
         # ✅ OPCIÓN 2: Email directamente en event (Lambda Proxy antiguo)
         email = event.get('email')
         if email:
-            result = str(email).strip()
+            result = str(email).strip().lower()
             logger.info(f"✓ Email found in event.email: {result}")
             return result
         
-        # ✅ OPCIÓN 3: Si hay user_id, construir email como fallback
+        # ✅ OPCIÓN 3: Si hay user_id y parece ser un email completo, usarlo
         user_id = get_user_id(event)
         if user_id:
             # Si el user_id parece ser un email completo, usarlo
             if '@' in str(user_id):
-                result = str(user_id).strip()
+                result = str(user_id).strip().lower()
                 logger.info(f"✓ Email constructed from user_id (already email): {result}")
                 return result
-            # Si el user_id es solo la parte antes del @, construir el email
-            # Intentar con el dominio común
-            constructed_email = f"{user_id}@200millas.com"
-            logger.warning(f"Email not found in event, trying constructed email: {constructed_email}")
-            return constructed_email
+            # NO construir emails desde user_id porque no conocemos el dominio real
+            # (ej: usuario puede tener @gmail.com, @yahoo.com, etc.)
+            logger.warning(f"Email not found in event context, and user_id '{user_id}' is not a complete email")
         
-        logger.warning("Email not found in event and no user_id available")
+        logger.warning("Email not found in event and cannot be constructed from user_id")
         return None
         
     except Exception as e:
