@@ -45,7 +45,15 @@ functions:
       - http:
           path: /auth/login
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
           integration: lambda
 
   register:
@@ -54,7 +62,15 @@ functions:
       - http:
           path: /auth/register
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Amz-Date
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
           integration: lambda
 
   authorize:
@@ -703,6 +719,36 @@ functions:
     events:
       - http:
           path: /chef/complete-packing/{order_id}
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  confirmOrderChef:
+    handler: services/chef/handler.confirm_order
+    timeout: 29
+    events:
+      - http:
+          path: /chef/orders/{order_id}/confirm
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorize
+            resultTtlInSeconds: 300
+            identitySource: method.request.header.Authorization
+            type: token
+
+  rejectOrderChef:
+    handler: services/chef/handler.reject_order
+    timeout: 29
+    events:
+      - http:
+          path: /chef/orders/{order_id}/reject
           method: post
           cors: true
           integration: lambda

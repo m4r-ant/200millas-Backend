@@ -445,3 +445,246 @@ def complete_packing(event, context):
         'message': 'Pedido empaquetado y listo para recoger por el repartidor'
     })
 
+
+@error_handler
+def confirm_order(event, context):
+    """
+    POST /chef/orders/{order_id}/confirm
+    Confirma un pedido pendiente (activa el wait token de confirmación)
+    Solo para chefs/staff
+    """
+    logger.info("Chef confirming order")
+    
+    order_id = get_path_param_from_path(event, 'order_id')
+    user_type = get_user_type(event)
+    user_id = get_user_id(event)
+    user_email = get_user_email(event)
+    tenant_id = get_tenant_id(event)
+    
+    chef_identifier = user_email or user_id
+    
+    if not order_id:
+        raise ValidationError("order_id es requerido")
+    
+    # Solo chefs y staff pueden confirmar pedidos
+    if user_type not in ['chef', 'staff', 'admin']:
+        raise UnauthorizedError("Solo chefs y staff pueden confirmar pedidos")
+    
+    if not chef_identifier:
+        raise UnauthorizedError("No se pudo identificar al usuario")
+    
+    # Obtener workflow y verificar que hay token
+    workflow = workflow_db.get_item({'order_id': order_id})
+    if not workflow:
+        raise NotFoundError(f"Workflow no encontrado para pedido {order_id}")
+    
+    confirmation_token = workflow.get('confirmation_task_token')
+    if not confirmation_token:
+        raise ValidationError("No hay token de confirmación activo para este pedido. El pedido puede que ya haya sido confirmado o no esté en espera de confirmación.")
+    
+    # Obtener orden
+    order = orders_db.get_item({'order_id': order_id})
+    if not order:
+        raise NotFoundError(f"Pedido {order_id} no encontrado")
+    
+    # Verificar que el pedido esté en estado pendiente
+    if order.get('status') not in ['pending', 'waiting_for_confirmation']:
+        raise ValidationError(f"El pedido ya está en estado {order.get('status')} y no puede ser confirmado nuevamente")
+    
+    timestamp = current_timestamp()
+    
+    # Actualizar orden a confirmed
+    orders_db.update_item(
+        {'order_id': order_id},
+        {
+            'status': 'confirmed', 
+            'updated_at': timestamp, 
+            'updated_by': chef_identifier,
+            'confirmed_by': chef_identifier,
+            'confirmed_at': timestamp
+        }
+    )
+    
+    # Actualizar workflow
+    if not workflow.get('steps'):
+        workflow['steps'] = []
+    
+    step = {
+        'status': 'confirmed',
+        'assigned_to': chef_identifier,
+        'started_at': timestamp,
+        'completed_at': timestamp,
+        'notes': f'Confirmado por chef {chef_identifier}'
+    }
+    workflow['steps'].append(step)
+    workflow['current_status'] = 'confirmed'
+    workflow['updated_at'] = timestamp
+    
+    # Enviar TaskSuccess al Step Function
+    try:
+        logger.info(f"Sending TaskSuccess for order confirmation - order_id: {order_id}")
+        sfn_client.send_task_success(
+            taskToken=confirmation_token,
+            output=json.dumps({
+                'order_id': order_id,
+                'status': 'confirmed',
+                'confirmed_at': timestamp,
+                'confirmed_by': chef_identifier
+            })
+        )
+        
+        # Limpiar el token
+        workflow['confirmation_task_token'] = None
+        workflow['confirmation_wait_started_at'] = None
+        logger.info(f"✅ TaskSuccess sent for order {order_id}")
+    except Exception as e:
+        logger.error(f"Error sending TaskSuccess: {str(e)}")
+        raise Exception(f"Error al confirmar pedido: {str(e)}")
+    
+    workflow_db.put_item(workflow)
+    
+    # Emitir evento
+    eventbridge = EventBridgeService()
+    eventbridge.emit_event(
+        event_type='OrderConfirmed',
+        detail={
+            'order_id': order_id,
+            'confirmed_by': chef_identifier,
+            'confirmed_at': timestamp
+        },
+        tenant_id=tenant_id
+    )
+    
+    logger.info(f"Order {order_id} confirmed by chef {chef_identifier}")
+    
+    return success_response({
+        'order_id': order_id,
+        'status': 'confirmed',
+        'confirmed_at': timestamp,
+        'confirmed_by': chef_identifier,
+        'message': 'Pedido confirmado exitosamente. El workflow continuará automáticamente.'
+    })
+
+
+@error_handler
+def reject_order(event, context):
+    """
+    POST /chef/orders/{order_id}/reject
+    Rechaza un pedido pendiente (envía TaskFailure al Step Function)
+    Solo para chefs/staff
+    """
+    logger.info("Chef rejecting order")
+    
+    order_id = get_path_param_from_path(event, 'order_id')
+    user_type = get_user_type(event)
+    user_id = get_user_id(event)
+    user_email = get_user_email(event)
+    tenant_id = get_tenant_id(event)
+    
+    chef_identifier = user_email or user_id
+    
+    if not order_id:
+        raise ValidationError("order_id es requerido")
+    
+    # Solo chefs y staff pueden rechazar pedidos
+    if user_type not in ['chef', 'staff', 'admin']:
+        raise UnauthorizedError("Solo chefs y staff pueden rechazar pedidos")
+    
+    if not chef_identifier:
+        raise UnauthorizedError("No se pudo identificar al usuario")
+    
+    # Obtener body para razón de rechazo
+    body = parse_body(event)
+    rejection_reason = body.get('reason', 'Pedido rechazado por el chef')
+    
+    # Obtener workflow y verificar que hay token
+    workflow = workflow_db.get_item({'order_id': order_id})
+    if not workflow:
+        raise NotFoundError(f"Workflow no encontrado para pedido {order_id}")
+    
+    confirmation_token = workflow.get('confirmation_task_token')
+    if not confirmation_token:
+        raise ValidationError("No hay token de confirmación activo para este pedido. El pedido puede que ya haya sido procesado.")
+    
+    # Obtener orden
+    order = orders_db.get_item({'order_id': order_id})
+    if not order:
+        raise NotFoundError(f"Pedido {order_id} no encontrado")
+    
+    timestamp = current_timestamp()
+    
+    # Actualizar orden a rejected/failed
+    orders_db.update_item(
+        {'order_id': order_id},
+        {
+            'status': 'rejected', 
+            'updated_at': timestamp, 
+            'updated_by': chef_identifier,
+            'rejected_by': chef_identifier,
+            'rejected_at': timestamp,
+            'rejection_reason': rejection_reason
+        }
+    )
+    
+    # Actualizar workflow
+    if not workflow.get('steps'):
+        workflow['steps'] = []
+    
+    step = {
+        'status': 'rejected',
+        'assigned_to': chef_identifier,
+        'started_at': timestamp,
+        'completed_at': timestamp,
+        'notes': f'Rechazado por chef {chef_identifier}: {rejection_reason}'
+    }
+    workflow['steps'].append(step)
+    workflow['current_status'] = 'rejected'
+    workflow['updated_at'] = timestamp
+    
+    # Enviar TaskFailure al Step Function
+    try:
+        logger.info(f"Sending TaskFailure for order rejection - order_id: {order_id}")
+        sfn_client.send_task_failure(
+            taskToken=confirmation_token,
+            error='OrderRejected',
+            cause=json.dumps({
+                'order_id': order_id,
+                'rejected_at': timestamp,
+                'rejected_by': chef_identifier,
+                'reason': rejection_reason
+            })
+        )
+        
+        # Limpiar el token
+        workflow['confirmation_task_token'] = None
+        workflow['confirmation_wait_started_at'] = None
+        logger.info(f"✅ TaskFailure sent for order {order_id}")
+    except Exception as e:
+        logger.error(f"Error sending TaskFailure: {str(e)}")
+        raise Exception(f"Error al rechazar pedido: {str(e)}")
+    
+    workflow_db.put_item(workflow)
+    
+    # Emitir evento
+    eventbridge = EventBridgeService()
+    eventbridge.emit_event(
+        event_type='OrderRejected',
+        detail={
+            'order_id': order_id,
+            'rejected_by': chef_identifier,
+            'rejected_at': timestamp,
+            'reason': rejection_reason
+        },
+        tenant_id=tenant_id
+    )
+    
+    logger.info(f"Order {order_id} rejected by chef {chef_identifier}")
+    
+    return success_response({
+        'order_id': order_id,
+        'status': 'rejected',
+        'rejected_at': timestamp,
+        'rejected_by': chef_identifier,
+        'reason': rejection_reason,
+        'message': 'Pedido rechazado. El workflow se detendrá.'
+    })

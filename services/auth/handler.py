@@ -95,12 +95,20 @@ def login(event, context):
         raise UnauthorizedError("Email o password incorrecto")
     
     user_id = email.split('@')[0]
+    
+    # Asegurar que el email no esté vacío antes de crear el token
+    if not email or not email.strip():
+        logger.error(f"Email is empty for user {user_id}")
+        raise ValidationError("Email no puede estar vacío")
+    
     token = create_access_token(
         user_id=user_id,
         tenant_id=os.environ.get('TENANT_ID', '200millas'),
         user_type=user['user_type'],
-        email=email
+        email=email.strip().lower()  # Asegurar que el email esté normalizado
     )
+    
+    logger.info(f"Token created with email: {email.strip().lower()}")
     
     # ============================================
     # MARCAR CHEF COMO DISPONIBLE AL HACER LOGIN
@@ -172,7 +180,21 @@ def authorize(event, context):
     
     try:
         payload = verify_token(token)
-        logger.info(f"Token verified successfully. User ID: {payload.get('user_id')}, Email: {payload.get('email')}")
+        email_from_token = payload.get('email', '')
+        user_id_from_token = payload.get('user_id', '')
+        
+        logger.info(f"Token verified successfully. User ID: {user_id_from_token}, Email: {email_from_token}")
+        
+        # Validar que el email esté presente en el token
+        if not email_from_token:
+            logger.error(f"Token does not contain email. Payload keys: {list(payload.keys())}")
+            # Intentar usar user_id como email si parece ser un email completo
+            if '@' in str(user_id_from_token):
+                email_from_token = str(user_id_from_token).strip().lower()
+                logger.warning(f"Using user_id as email: {email_from_token}")
+            else:
+                logger.error("Cannot extract email from token")
+                raise UnauthorizedError("Token inválido: no contiene email")
         
         # Construir ARN base para permitir acceso a todos los métodos del API
         # method_arn formato: arn:aws:execute-api:region:account-id:api-id/stage/method/resource-path
@@ -201,9 +223,9 @@ def authorize(event, context):
             'context': {
                 # ✅ IMPORTANTE: Todo debe ser STRING (no dict, no int, no objetos complejos)
                 'user_id': str(payload['user_id']),
-                'email': str(payload['email']),
-                'tenant_id': str(payload['tenant_id']),
-                'user_type': str(payload['user_type'])
+                'email': str(email_from_token).strip().lower(),  # Asegurar que el email esté normalizado
+                'tenant_id': str(payload.get('tenant_id', os.environ.get('TENANT_ID', '200millas'))),
+                'user_type': str(payload.get('user_type', 'customer'))
             }
         }
         
