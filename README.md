@@ -2,6 +2,22 @@
 
 Sistema de Gestión de Pedidos - Arquitectura Serverless Multi-tenant
 
+## 🔗 URLs del Sistema
+
+### API REST (REST API Gateway)
+```
+https://7wx0xlh4h9.execute-api.us-east-1.amazonaws.com/dev
+```
+
+### WebSocket API
+```
+wss://6jf8mpahik.execute-api.us-east-1.amazonaws.com/dev
+```
+
+> 📝 **Nota**: Ver `FRONTEND_CONFIG.md` para ejemplos de configuración del frontend.
+
+---
+
 ## 📋 Descripción
 
 Sistema completo de gestión de pedidos para restaurantes de comida rápida, implementado con arquitectura serverless en AWS. Incluye flujo completo desde la creación del pedido por el cliente hasta la entrega por el repartidor, con asignación automática de chefs mediante SQS y workflow automatizado con Step Functions.
